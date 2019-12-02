@@ -7,6 +7,9 @@
 //! animations without constantly having to pass around time variables; it
 //! hides the plumbing, so that you need to provide time only once: when
 //! evaluating the animation.
+//!
+//! Animations are composed similarly to Rust's iterators, so no memory
+//! allocations are necessary.
 
 use std::marker::PhantomData;
 use std::ops::{Add, Mul, Neg, RangeInclusive, Sub};
@@ -41,8 +44,11 @@ pub trait Fun {
     fn eval(&self, t: Self::T) -> Self::V;
 }
 
-/// `Anim` is the main type provided by pareen. It is a simple wrapper around
-/// any type implementing [`Fun`](trait.Fun.html).
+/// `Anim` is the main type provided by pareen. It is a wrapper around any type
+/// implementing [`Fun`](trait.Fun.html).
+///
+/// `Anim` provides methods for transforming and composing animations, allowing
+/// complex animations to be created out of simple pieces.
 #[derive(Clone, Debug)]
 pub struct Anim<F>(F);
 
@@ -131,6 +137,17 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
+    F::T: Copy + Sub<Output = F::T>,
+{
+    /// Shift an animation in time, so that it is moved to the right by `t_delay`.
+    pub fn shift_time(self, t_delay: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        self.map_time(move |t| t - t_delay)
+    }
+}
+
+impl<F> Anim<F>
+where
+    F: Fun,
     F::T: Copy + PartialOrd,
 {
     /// Concatenate `self` with another animation in time, using `self` until
@@ -162,18 +179,7 @@ where
         G: Fun<T = F::T, V = F::V>,
         A: Into<Anim<G>>,
     {
-        cond_t(fun(move |t| t < self_end), self, next)
-    }
-}
-
-impl<F> Anim<F>
-where
-    F: Fun,
-    F::T: Copy + Sub<Output = F::T>,
-{
-    /// Shift an animation in time, so that it is moved to the right by `t_delay`.
-    pub fn shift_time(self, t_delay: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        self.map_time(move |t| t - t_delay)
+        cond(fun(move |t| t < self_end), self, next)
     }
 }
 
@@ -187,7 +193,7 @@ where
     /// `next` will see time starting at zero once it plays.
     ///
     /// # Example
-    /// Stay at value `5.0` for ten seconds, then increase value proply:
+    /// Stay at value `5.0` for ten seconds, then increase value proportionally:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
     /// let anim_1 = pareen::constant(5.0f32);
@@ -302,7 +308,6 @@ where
     /// Go from zero to 2pi in half a second:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    ///
     /// // Zero to 2pi in one second
     /// let angle = pareen::circle();
     ///
@@ -310,7 +315,7 @@ where
     /// let anim = angle.squeeze(42.0f32, 0.5..=1.0);
     ///
     /// assert_approx_eq!(anim.eval(0.0f32), 42.0);
-    /// assert_approx_eq!(anim.eval(0.4f32), 42.0);
+    /// assert_approx_eq!(anim.eval(0.5), 0.0);
     /// assert_approx_eq!(anim.eval(1.0), std::f32::consts::PI * 2.0);
     /// assert_approx_eq!(anim.eval(1.1), 42.0);
     /// ```
@@ -322,7 +327,7 @@ where
         let time_shift = *range.start();
         let time_scale = F::T::one() / (*range.end() - *range.start());
 
-        cond_t(
+        cond(
             move |t| range.contains(&t),
             self.map_time(move |t| (t - time_shift) * time_scale),
             default,
@@ -415,11 +420,15 @@ where
 ///
 /// # Example
 /// ```
+/// # use assert_approx_eq::assert_approx_eq;
 /// fn my_crazy_function(t: f32) -> f32 {
-///     42.0
+///     42.0 / t
 /// }
 ///
 /// let anim = pareen::fun(my_crazy_function);
+///
+/// assert_approx_eq!(anim.eval(1.0), 42.0);
+/// assert_approx_eq!(anim.eval(2.0), 21.0);
 /// ```
 pub fn fun<T, V>(f: impl Fn(T) -> V) -> Anim<impl Fun<T = T, V = V>> {
     From::from(f)
@@ -486,6 +495,7 @@ where
     fun(move |t| From::from(t))
 }
 
+/// Proportionally increase value from zero to 2pi.
 pub fn circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
     T: Float,
@@ -494,6 +504,7 @@ where
     prop(V::PI() * (V::one() + V::one()))
 }
 
+/// Proportionally increase value from zero to pi.
 pub fn half_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
     T: Float,
@@ -502,6 +513,7 @@ where
     prop(V::PI())
 }
 
+/// Proportionally increase value from zero to pi/2.
 pub fn quarter_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
     T: Float,
@@ -510,7 +522,48 @@ where
     prop(V::PI() * (V::one() / (V::one() + V::one())))
 }
 
-pub fn cond_t<T, V, F, G, H, Cond, A, B>(cond: Cond, a: A, b: B) -> Anim<impl Fun<T = T, V = V>>
+/// Return the value of one of two animations depending on a condition.
+///
+/// This allows returning animations of different types conditionally.
+///
+/// Note that the condition `cond` may either be a value `true` and `false`, or
+/// it may itself be a dynamic animation of type `bool`.
+///
+/// For dynamic conditions, in many cases it suffices to use either
+/// [`Anim::switch`](struct.Anim.html#method.switch) or
+/// [`Anim::seq`](struct.Anim.html#method.seq) instead of this function.
+///
+/// # Examples
+/// ## Constant conditions
+///
+/// The following example does _not_ compile, because the branches have
+/// different types:
+/// ```compile_fail
+/// let cond = true;
+/// let anim = if cond { pareen::constant(1) } else { pareen::id() };
+/// ```
+///
+/// However, this does compile:
+/// ```
+/// let cond = true;
+/// let anim = pareen::cond(cond, 1, pareen::id());
+///
+/// assert_eq!(anim.eval(2), 1);
+/// ```
+///
+/// ## Dynamic conditions
+///
+/// ```
+/// let cond = pareen::fun(|t| t * t <= 4);
+/// let anim_1 = 1;
+/// let anim_2 = pareen::id();
+/// let anim = pareen::cond(cond, anim_1, anim_2);
+///
+/// assert_eq!(anim.eval(1), 1); // 1 * 1 <= 4
+/// assert_eq!(anim.eval(2), 1); // 2 * 2 <= 4
+/// assert_eq!(anim.eval(3), 3); // 3 * 3 > 4
+/// ```
+pub fn cond<T, V, F, G, H, Cond, A, B>(cond: Cond, a: A, b: B) -> Anim<impl Fun<T = T, V = V>>
 where
     T: Copy,
     F: Fun<T = T, V = bool>,
@@ -525,17 +578,6 @@ where
     let b = b.into();
 
     fun(move |t| if cond.eval(t) { a.eval(t) } else { b.eval(t) })
-}
-
-pub fn cond<T, V, F, G, A, B>(cond: bool, a: A, b: B) -> Anim<impl Fun<T = T, V = V>>
-where
-    T: Copy,
-    F: Fun<T = T, V = V>,
-    G: Fun<T = T, V = V>,
-    A: Into<Anim<F>>,
-    B: Into<Anim<G>>,
-{
-    cond_t(fun(move |_| cond), a, b)
 }
 
 /// Linearly interpolate between two animations, starting at time zero and
@@ -570,6 +612,7 @@ where
     a.into().lerp(b.into())
 }
 
+/// Evaluate a cubic polynomial in time.
 pub fn cubic<T>(w: &[T; 4]) -> Anim<impl Fun<T = T, V = T> + '_>
 where
     T: Float,
