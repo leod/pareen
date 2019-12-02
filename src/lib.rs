@@ -548,7 +548,7 @@ where
     /// let first_anim = pareen::constant(2.0);
     /// let second_anim = pareen::prop(1.0f32);
     /// let anim = first_anim.seq_ease_in_out(
-    ///     0.4,
+    ///     0.5,
     ///     easer::functions::Cubic,
     ///     0.3,
     ///     second_anim,

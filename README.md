@@ -38,7 +38,25 @@ let anim4 = pareen::cubic(&[1.0, 2.0, 3.0, 4.0]) - anim3;
 let value = anim4.eval(1.0);
 ```
 
-There is an example that shows some animations as plots via [RustGnuplot](https://github.com/SiegeLord/RustGnuplot) in [examples/plots.rs]. Given that `gnuplot` has been installed, it can be executed like this:
+### Easer
+Optionally, you can enable support for integrating easing functions from [`easer`](https://docs.rs/easer/0.2.1/easer/index.html). 
+
+```rust
+let first_anim = pareen::constant(2.0);
+let second_anim = pareen::prop(1.0f32);
+
+// Transition from first_anim to second_anim at time 0.5, applying cubic easing
+// for 0.3 time units.
+let anim = first_anim.seq_ease_in_out(
+    0.5,
+    easer::functions::Cubic,
+    0.3,
+    second_anim,
+);
+```
+
+### Plots
+There is an example that shows some animations as plots via [RustGnuplot](https://github.com/SiegeLord/RustGnuplot) in [examples/plots.rs](examples/plots.rs). Given that `gnuplot` has been installed, it can be executed like this:
 ```bash
-cargo run --example plots
+cargo run --example plots --feature easer
 ```
