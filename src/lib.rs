@@ -410,6 +410,143 @@ where
     }
 }
 
+#[cfg(feature = "easer")]
+impl<V, F> Anim<F>
+where
+    V: Float,
+    F: Fun<T = V, V = V>,
+{
+    fn seq_ease<G, H, A>(
+        self,
+        self_end: V,
+        ease: impl Fn(V, V, V) -> Anim<G>,
+        ease_duration: V,
+        next: A,
+    ) -> Anim<impl Fun<T = V, V = V>>
+    where
+        G: Fun<T = V, V = V>,
+        H: Fun<T = V, V = V>,
+        A: Into<Anim<H>>,
+    {
+        let next = next.into();
+
+        let ease_start_value = self.eval(self_end);
+        let ease_end_value = next.eval(V::zero());
+        let ease_delta = ease_end_value - ease_start_value;
+        let ease = ease(ease_start_value, ease_delta, ease_duration);
+
+        self.seq(self_end, ease).seq(self_end + ease_duration, next)
+    }
+
+    /// Play two animations in sequence, transitioning between them with an
+    /// easing-in function from `easer`.
+    ///
+    /// This is only available when enabling the `easer` feature for `pareen`.
+    ///
+    /// The values of `self` at `self_end` and of `next` at time zero are used
+    /// to determine the parameters of the easing function.
+    ///
+    /// Note that, as with [`seq`](struct.Anim.html#method.seq), the `next`
+    /// animation will see time starting at zero once it plays.
+    ///
+    /// # Arguments
+    ///
+    /// * `self_end` - Time at which the `self` animation is to stop.
+    /// * `_easing` - A struct implementing
+    ///     [`easer::functions::Easing`](https://docs.rs/easer/0.2.1/easer/functions/trait.Easing.html).
+    ///     This determines the easing function that will be used for the
+    ///     transition. It is passed as a parameter here to simplify type
+    ///     inference.
+    /// * `ease_duration` - The amount of time to use for transitioning to `next`.
+    /// * `next` - The animation to play after transitioning.
+    pub fn seq_ease_in<E, G, A>(
+        self,
+        self_end: V,
+        _easing: E,
+        ease_duration: V,
+        next: A,
+    ) -> Anim<impl Fun<T = V, V = V>>
+    where
+        E: Easing<V>,
+        G: Fun<T = V, V = V>,
+        A: Into<Anim<G>>,
+    {
+        self.seq_ease(self_end, ease_in::<E, V>, ease_duration, next)
+    }
+
+    /// Play two animations in sequence, transitioning between them with an
+    /// easing-out function from `easer`.
+    ///
+    /// This is only available when enabling the `easer` feature for `pareen`.
+    ///
+    /// The values of `self` at `self_end` and of `next` at time zero are used
+    /// to determine the parameters of the easing function.
+    ///
+    /// Note that, as with [`seq`](struct.Anim.html#method.seq), the `next`
+    /// animation will see time starting at zero once it plays.
+    ///
+    /// # Arguments
+    ///
+    /// * `self_end` - Time at which the `self` animation is to stop.
+    /// * `_easing` - A struct implementing
+    ///     [`easer::functions::Easing`](https://docs.rs/easer/0.2.1/easer/functions/trait.Easing.html).
+    ///     This determines the easing function that will be used for the
+    ///     transition. It is passed as a parameter here to simplify type
+    ///     inference.
+    /// * `ease_duration` - The amount of time to use for transitioning to `next`.
+    /// * `next` - The animation to play after transitioning.
+    pub fn seq_ease_out<E, G, A>(
+        self,
+        self_end: V,
+        _: E,
+        ease_duration: V,
+        next: A,
+    ) -> Anim<impl Fun<T = V, V = V>>
+    where
+        E: Easing<V>,
+        G: Fun<T = V, V = V>,
+        A: Into<Anim<G>>,
+    {
+        self.seq_ease(self_end, ease_out::<E, V>, ease_duration, next)
+    }
+
+    /// Play two animations in sequence, transitioning between them with an
+    /// easing-in-out function from `easer`.
+    ///
+    /// This is only available when enabling the `easer` feature for `pareen`.
+    ///
+    /// The values of `self` at `self_end` and of `next` at time zero are used
+    /// to determine the parameters of the easing function.
+    ///
+    /// Note that, as with [`seq`](struct.Anim.html#method.seq), the `next`
+    /// animation will see time starting at zero once it plays.
+    ///
+    /// # Arguments
+    ///
+    /// * `self_end` - Time at which the `self` animation is to stop.
+    /// * `_easing` - A struct implementing
+    ///     [`easer::functions::Easing`](https://docs.rs/easer/0.2.1/easer/functions/trait.Easing.html).
+    ///     This determines the easing function that will be used for the
+    ///     transition. It is passed as a parameter here to simplify type
+    ///     inference.
+    /// * `ease_duration` - The amount of time to use for transitioning to `next`.
+    /// * `next` - The animation to play after transitioning.
+    pub fn seq_ease_in_out<E, G, A>(
+        self,
+        self_end: V,
+        _: E,
+        ease_duration: V,
+        next: A,
+    ) -> Anim<impl Fun<T = V, V = V>>
+    where
+        E: Easing<V>,
+        G: Fun<T = V, V = V>,
+        A: Into<Anim<G>>,
+    {
+        self.seq_ease(self_end, ease_in_out::<E, V>, ease_duration, next)
+    }
+}
+
 impl<V, F> Anim<F>
 where
     F: Fun<V = Option<V>>,
@@ -693,7 +830,7 @@ macro_rules! anim_match {
     }
 }
 
-/// Integrate an easing in function from the `easer` library.
+/// Integrate an easing-in function from the `easer` library.
 ///
 /// This is only available when enabling the `easer` feature for `pareen`.
 ///
@@ -714,7 +851,7 @@ where
     fun(move |t| E::ease_in(t, start, delta, duration))
 }
 
-/// Integrate an easing out function from the `easer` library.
+/// Integrate an easing-out function from the `easer` library.
 ///
 /// This is only available when enabling the `easer` feature for `pareen`.
 ///
@@ -735,7 +872,7 @@ where
     fun(move |t| E::ease_out(t, start, delta, duration))
 }
 
-/// Integrate an easing in-out function from the `easer` library.
+/// Integrate an easing-in-out function from the `easer` library.
 ///
 /// This is only available when enabling the `easer` feature for `pareen`.
 ///
