@@ -51,7 +51,7 @@ pub trait Fun {
 /// `Anim` provides methods that transform or compose animations, allowing
 /// complex animations to be created out of simple pieces.
 #[derive(Clone, Debug)]
-pub struct Anim<F>(F);
+pub struct Anim<F>(pub F);
 
 impl<F> Anim<F>
 where
