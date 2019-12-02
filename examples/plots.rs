@@ -26,7 +26,7 @@ fn main() {
     plots.add(
         "ease transition from 2 to a proportional anim",
         pareen::constant(2.0).seq_ease_in_out(
-            0.4,
+            0.5,
             easer::functions::Cubic,
             0.3,
             pareen::prop(1.0f32),
