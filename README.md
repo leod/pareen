@@ -1,5 +1,5 @@
 # Pareen
-Pareen is a small library for *par*ameterized inbetw*een*ing.
+Pareen is a small Rust library for *par*ameterized inbetw*een*ing.
 
 The intended application is in game programming, where you sometimes have 
 two discrete game states between which you want to transition smoothly for
