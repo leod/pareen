@@ -11,6 +11,31 @@
 //!
 //! Animations are composed similarly to Rust's iterators, so no memory
 //! allocations are necessary.
+//! ## Examples
+//!
+//! ```rust
+//! # use assert_approx_eq::assert_approx_eq;
+//! // An animation returning a constant value
+//! let anim1 = pareen::constant(1.0f64);
+//!
+//! // Animations can be evaluated at any time
+//! let value = anim1.eval(0.5);
+//!
+//! // Animations can be played in sequence
+//! let anim2 = anim1.seq(0.7, pareen::prop(0.25) + 0.5);
+//!
+//! // Animations can be composed and transformed in various ways
+//! let anim3 = anim2
+//!     .lerp(pareen::circle().cos())
+//!     .scale_min_max(5.0, 10.0)
+//!     .backwards(1.0)
+//!     .squeeze(3.0, 0.5..=1.0);
+//!
+//! let anim4 = pareen::cubic(&[1.0, 2.0, 3.0, 4.0]) - anim3;
+//!
+//! let value = anim4.eval(1.0);
+//! assert_approx_eq!(value, 0.0);
+//! ```
 
 use std::marker::PhantomData;
 use std::ops::{Add, Mul, Neg, RangeInclusive, Sub};
