@@ -496,8 +496,7 @@ where
 
 /// An animation that returns time as its value.
 ///
-/// This is the same as [`prop`](struct.Anim.html#method.prop) with
-/// a factor of one.
+/// This is the same as [`prop`](fn.prop.html) with a factor of one.
 ///
 /// # Examples
 /// ```
