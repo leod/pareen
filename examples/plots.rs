@@ -9,6 +9,14 @@ fn main() {
         pareen::circle().sin().powi(2).lerp(pareen::circle().cos()),
     );
     plots.add(
+        "dynamic lerp between sin^2 and cos, squeezed into [0.5 .. 1]",
+        pareen::circle()
+            .sin()
+            .powi(2)
+            .lerp(pareen::circle().cos())
+            .squeeze(0.3, 0.5..=1.0),
+    );
+    plots.add(
         "switch from 5 to 10 at time=0.7",
         pareen::constant(5.0).switch(0.7, 10.0),
     );
