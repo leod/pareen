@@ -11,7 +11,7 @@
 use std::marker::PhantomData;
 use std::ops::{Add, Mul, Neg, RangeInclusive, Sub};
 
-use num_traits::{Float, FloatConst, Num, One, Zero};
+use num_traits::{Float, FloatConst, Num, One};
 
 /// A `Fun` represents anything that maps from some type `T` to another
 /// type `V`.
@@ -62,7 +62,10 @@ where
     ///
     /// Turn `(2.0 * t)` into `(2.0 * t).sqrt() + 2.0 * t`:
     /// ```
+    /// # use assert_approx_eq::assert_approx_eq;
     /// let anim = pareen::proportional(2.0f32).map(|value| value.sqrt() + value);
+    ///
+    /// assert_approx_eq!(anim.eval(1.0), 2.0f32.sqrt() + 2.0);
     /// ```
     pub fn map<W>(self, f: impl Fn(F::V) -> W) -> Anim<impl Fun<T = F::T, V = W>> {
         self.map_anim(fun(f))
@@ -133,7 +136,7 @@ where
     /// Concatenate `self` with another animation in time, using `self` until
     /// time `self_end` (non-inclusive), and then switching to `next`.
     ///
-    /// # Example
+    /// # Examples
     /// Switch from one constant value to another:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
@@ -150,8 +153,8 @@ where
     /// let cubic_2 = pareen::cubic(&[-1.2642e1, 2.0455e1, -8.1364, 1.0909]);
     /// let cubic_3 = pareen::cubic(&[1.6477e1, -4.9432e1, 4.7773e1, -1.3818e1]);
     ///
-    /// // Use `cubic_1` for [0.0, 0.4), `cubic_2` for [0.4, 0.8)` and
-    /// // `cubic_3` for `[0.8, ..)`.
+    /// // Use cubic_1 for [0.0, 0.4), cubic_2 for [0.4, 0.8) and
+    /// // cubic_3 for [0.8, ..).
     /// let anim = cubic_1.switch(0.4, cubic_2).switch(0.8, cubic_3);
     /// ```
     pub fn switch<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
@@ -168,8 +171,9 @@ where
     F: Fun,
     F::T: Copy + Sub<Output = F::T>,
 {
-    pub fn shift_time(self, t_add: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        self.map_time(move |t| t - t_add)
+    /// Shift an animation in time, so that it is moved to the right by `t_delay`.
+    pub fn shift_time(self, t_delay: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        self.map_time(move |t| t - t_delay)
     }
 }
 
@@ -179,13 +183,20 @@ where
     F::T: Copy + PartialOrd + Sub<Output = F::T>,
 {
     /// Play two animations in sequence, first playing `self` until time
-    /// `self_end`, and then switching to `next`. Note that `next` will see
-    /// time starting at zero once it plays.
+    /// `self_end` (non-inclusive), and then switching to `next`. Note that
+    /// `next` will see time starting at zero once it plays.
     ///
     /// # Example
     /// Stay at value `5.0` for ten seconds, then increase value proportionally:
     /// ```
-    /// let anim_1 = pareen::constant(5.0).seq(10.0, pareen::proportional(2.0) + 5.0);
+    /// # use assert_approx_eq::assert_approx_eq;
+    /// let anim_1 = pareen::constant(5.0f32);
+    /// let anim_2 = pareen::proportional(2.0f32) + 5.0;
+    /// let anim = anim_1.seq(10.0, anim_2);
+    ///
+    /// assert_approx_eq!(anim.eval(0.0), 5.0);
+    /// assert_approx_eq!(anim.eval(10.0), 5.0);
+    /// assert_approx_eq!(anim.eval(11.0), 7.0);
     /// ```
     pub fn seq<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
@@ -202,6 +213,16 @@ where
     F::T: Copy + Sub<Output = F::T>,
 {
     /// Play an animation backwards, starting at time `end`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use assert_approx_eq::assert_approx_eq;
+    /// let anim = pareen::proportional(2.0f32).backwards(1.0);
+    ///
+    /// assert_approx_eq!(anim.eval(0.0f32), 2.0);
+    /// assert_approx_eq!(anim.eval(1.0f32), 0.0);
+    /// ```
     pub fn backwards(self, end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
         fun(move |t| self.eval(end - t))
     }
@@ -215,6 +236,17 @@ where
 {
     /// Given animation values in `[0.0 .. 1.0]`, this function transforms the
     /// values so that they are in `[min .. max]`.
+    ///
+    /// # Example
+    /// ```
+    /// # use assert_approx_eq::assert_approx_eq;
+    /// let min = -3.0f32;
+    /// let max = 10.0;
+    /// let anim = pareen::id().scale_min_max(min, max);
+    ///
+    /// assert_approx_eq!(anim.eval(0.0f32), min);
+    /// assert_approx_eq!(anim.eval(1.0f32), max);
+    /// ```
     pub fn scale_min_max(self, min: F::V, max: F::V) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self * (max - min) + min
     }
@@ -257,6 +289,31 @@ where
     F::T: Copy + Float,
     F::V: Copy,
 {
+    /// Transform an animation in time, so that its time `[0 .. 1]` is shifted
+    /// and scaled into the given `range`.
+    ///
+    /// In other words, this function can both delay and speed up or slow down a
+    /// given animation.
+    ///
+    /// For time inputs outside the `range`, the `default` value is returned.
+    ///
+    /// # Example
+    ///
+    /// Go from zero to 2pi in half a second:
+    /// ```
+    /// # use assert_approx_eq::assert_approx_eq;
+    ///
+    /// // Zero to 2pi in one second
+    /// let angle = pareen::full_circle();
+    ///
+    /// // Zero to 2pi from time 0.5 to 1.0
+    /// let anim = angle.squeeze(42.0f32, 0.5..=1.0);
+    ///
+    /// assert_approx_eq!(anim.eval(0.0f32), 42.0);
+    /// assert_approx_eq!(anim.eval(0.4f32), 42.0);
+    /// assert_approx_eq!(anim.eval(1.0), std::f32::consts::PI * 2.0);
+    /// assert_approx_eq!(anim.eval(1.1), 42.0);
+    /// ```
     pub fn squeeze(
         self,
         default: F::V,
@@ -295,7 +352,8 @@ where
     /// assert_approx_eq!(anim.eval(2.0), 15.0);
     /// ```
     ///
-    /// It is also possible to linearly interpolate between two animations:
+    /// It is also possible to linearly interpolate between two non-constant
+    /// animations:
     /// ```
     /// let anim = pareen::full_circle().sin().lerp(pareen::full_circle().cos());
     /// let value: f32 = anim.eval(0.5f32);
@@ -367,18 +425,33 @@ pub fn fun<T, V>(f: impl Fn(T) -> V) -> Anim<impl Fun<T = T, V = V>> {
     From::from(f)
 }
 
+/// A constant animation, always returning the same value.
+///
+/// # Example
+/// ```
+/// # use assert_approx_eq::assert_approx_eq;
+/// let anim = pareen::constant(1.0f32);
+///
+/// assert_approx_eq!(anim.eval(-10000.0f32), 1.0);
+/// assert_approx_eq!(anim.eval(0.0), 1.0);
+/// assert_approx_eq!(anim.eval(42.0), 1.0);
+/// ```
 pub fn constant<T, V: Copy>(c: V) -> Anim<impl Fun<T = T, V = V>> {
     fun(move |_| c)
 }
 
-pub fn one<T, V: Copy + One>() -> Anim<impl Fun<T = T, V = V>> {
-    constant(V::one())
-}
-
-pub fn zero<T, V: Copy + Zero>() -> Anim<impl Fun<T = T, V = V>> {
-    constant(V::zero())
-}
-
+/// An animation that returns a value proportional to time.
+///
+/// # Example
+///
+/// Scale time with a factor of three:
+/// ```
+/// # use assert_approx_eq::assert_approx_eq;
+/// let anim = pareen::proportional(3.0f32);
+///
+/// assert_approx_eq!(anim.eval(0.0f32), 0.0);
+/// assert_approx_eq!(anim.eval(3.0), 9.0);
+/// ```
 pub fn proportional<T, V, W>(m: V) -> Anim<impl Fun<T = T, V = W>>
 where
     V: Copy + Mul<Output = W> + From<T>,
@@ -386,6 +459,26 @@ where
     fun(move |t| m * From::from(t))
 }
 
+/// An animation that returns time as its value.
+///
+/// This is the same as [`proportional`](struct.Anim.html#method.proportional) with
+/// a factor of one.
+///
+/// # Examples
+/// ```
+/// let anim = pareen::id::<isize, isize>();
+///
+/// assert_eq!(anim.eval(-100), -100);
+/// assert_eq!(anim.eval(0), 0);
+/// assert_eq!(anim.eval(100), 100);
+/// ```
+/// ```
+/// # use assert_approx_eq::assert_approx_eq;
+/// let anim = pareen::id() * 3.0f32 + 4.0;
+///
+/// assert_approx_eq!(anim.eval(0.0), 4.0);
+/// assert_approx_eq!(anim.eval(100.0), 304.0);
+/// ```
 pub fn id<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
     V: From<T>,
@@ -445,6 +538,26 @@ where
     cond_t(fun(move |_| cond), a, b)
 }
 
+/// Linearly interpolate between two animations, starting at time zero and
+/// finishing at time one.
+///
+/// This is a wrapper around [`Anim::lerp`](struct.Anim.html#method.lerp) for
+/// convenience, allowing automatic conversion into `Anim` for both `a` and
+/// `b`.
+///
+/// # Example
+///
+/// Linearly interpolate between two constant values:
+///
+/// ```
+/// # use assert_approx_eq::assert_approx_eq;
+/// let anim = pareen::lerp(5.0f32, 10.0);
+///
+/// assert_approx_eq!(anim.eval(0.0f32), 5.0);
+/// assert_approx_eq!(anim.eval(0.5), 7.5);
+/// assert_approx_eq!(anim.eval(1.0), 10.0);
+/// assert_approx_eq!(anim.eval(2.0), 15.0);
+/// ```
 pub fn lerp<T, V, W, F, G, A, B>(a: A, b: B) -> Anim<impl Fun<T = T, V = V>>
 where
     T: Copy + Mul<W, Output = W>,
