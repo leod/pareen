@@ -46,7 +46,8 @@ let value = anim4.eval(1.0);
 ```
 
 ### Easer
-Optionally, you can enable support for integrating easing functions from [`easer`](https://docs.rs/easer/0.2.1/easer/index.html). 
+Optionally, you can enable support for integrating easing functions from
+[`easer`](https://docs.rs/easer/0.2.1/easer/index.html). 
 
 ```rust
 let first_anim = pareen::constant(2.0);
@@ -63,7 +64,10 @@ let anim = first_anim.seq_ease_in_out(
 ```
 
 ### Plots
-There is an example that shows some animations as plots via [RustGnuplot](https://github.com/SiegeLord/RustGnuplot) in [examples/plots.rs](examples/plots.rs). Given that `gnuplot` has been installed, it can be executed like this:
+There is an example that shows some animations as plots via
+[RustGnuplot](https://github.com/SiegeLord/RustGnuplot) in
+[examples/plots.rs](examples/plots.rs). Given that `gnuplot` has been
+installed, it can be executed like this:
 ```bash
 cargo run --example plots --feature easer
 ```
