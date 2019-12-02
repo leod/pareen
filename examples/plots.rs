@@ -1,24 +1,25 @@
-use gnuplot::{AxesCommon, Color, Figure};
+use gnuplot::{AutoOption, AxesCommon, Color, Figure};
 
 fn main() {
     let mut plots = Plots { plots: Vec::new() };
+
     plots.add("id", pareen::id());
-    plots.add("lerp between 5 and 10", pareen::lerp(5.0, 10.0));
+    plots.add("lerp between 2 and 4", pareen::lerp(2.0, 4.0));
     plots.add(
         "dynamic lerp between sin^2 and cos",
         pareen::circle().sin().powi(2).lerp(pareen::circle().cos()),
     );
     plots.add(
-        "dynamic lerp between sin^2 and cos, squeezed into [0.5 .. 1]",
+        "dynamic lerp, squeezed into [0.5 .. 1]",
         pareen::circle()
             .sin()
             .powi(2)
             .lerp(pareen::circle().cos())
-            .squeeze(0.3, 0.5..=1.0),
+            .squeeze(0.0, 0.5..=1.0),
     );
     plots.add(
-        "switch from 5 to 10 at time=0.7",
-        pareen::constant(5.0).switch(0.7, 10.0),
+        "switch from 1 to 2 at time=0.5",
+        pareen::constant(1.0).switch(0.5, 2.0),
     );
 
     plots.show_gnuplot();
@@ -32,7 +33,7 @@ fn sample(
     let mut ts = Vec::new();
     let mut vs = Vec::new();
 
-    for i in 0..n {
+    for i in 0..=n {
         let time = i as f32 / n as f32 * max_t;
         let value = anim.eval(time);
 
@@ -55,7 +56,7 @@ struct Plots {
 
 impl Plots {
     fn add(&mut self, name: &'static str, anim: pareen::Anim<impl pareen::Fun<T = f32, V = f32>>) {
-        let (ts, vs) = sample(100, 1.0, anim);
+        let (ts, vs) = sample(1000, 1.0, anim);
 
         self.plots.push(Plot { name, ts, vs });
     }
@@ -64,7 +65,8 @@ impl Plots {
         let mut figure = Figure::new();
 
         // Show plots in a square rows/columns layout
-        let square_size = (self.plots.len() as f32).sqrt().ceil() as u32;
+        let n_cols = (self.plots.len() as f32).sqrt() as u32;
+        let n_rows = (self.plots.len() as f32).sqrt().ceil() as u32;
 
         for (i, plot) in self.plots.iter().enumerate() {
             figure
@@ -73,7 +75,9 @@ impl Plots {
                 .set_title(&plot.name, &[])
                 .set_x_label("time", &[])
                 .set_y_label("value", &[])
-                .set_pos_grid(square_size, square_size, i as u32);
+                .set_x_ticks(Some((AutoOption::Fix(0.5), 0)), &[], &[])
+                .set_y_ticks(Some((AutoOption::Fix(0.5), 0)), &[], &[])
+                .set_pos_grid(n_rows, n_cols, i as u32);
         }
 
         figure.show().unwrap();
