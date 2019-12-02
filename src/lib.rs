@@ -48,7 +48,7 @@ pub trait Fun {
 /// `Anim` is the main type provided by pareen. It is a wrapper around any type
 /// implementing [`Fun`](trait.Fun.html).
 ///
-/// `Anim` provides methods for transforming and composing animations, allowing
+/// `Anim` provides methods that transform or compose animations, allowing
 /// complex animations to be created out of simple pieces.
 #[derive(Clone, Debug)]
 pub struct Anim<F>(F);
@@ -585,8 +585,8 @@ where
 /// finishing at time one.
 ///
 /// This is a wrapper around [`Anim::lerp`](struct.Anim.html#method.lerp) for
-/// convenience, allowing automatic conversion into `Anim` for both `a` and
-/// `b`.
+/// convenience, allowing automatic conversion into [`Anim`](struct.Anim.html)
+/// for both `a` and `b`.
 ///
 /// # Example
 ///
