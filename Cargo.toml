@@ -3,6 +3,12 @@ name = "pareen"
 version = "0.1.0"
 authors = ["Leonard Dahlmann <leo.dahlmann@gmail.com>"]
 edition = "2018"
+license = "MIT"
+description = "A small library for parameterized inbetweening"
+homepage = "https://github.com/leod/pareen"
+documentation = "https://docs.rs/pareen"
+repository = "https://github.com/leod/pareen"
+keywords = ["animation", "combinators", "tween", "easing"]
 
 [dependencies]
 num-traits = "0.2"
