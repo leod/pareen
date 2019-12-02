@@ -1,12 +1,13 @@
 //! Pareen is a small library for *par*ameterized inbetw*een*ing.
 //!
-//! Pareen allows you to compose animations that are parameterized by time, i.e.
-//! mappings from time to some animated value. Its intended application is in
-//! game programming, where you sometimes have two discrete game states between
-//! which you want to transition smoothly. Pareen gives you tools for combining
-//! animations without constantly having to pass around time variables; it
-//! hides the plumbing, so that you need to provide time only once: when
-//! evaluating the animation.
+//! Its intended application is in game programming, where you sometimes have
+//! two discrete game states between which you want to transition smoothly
+//! for visualization purposes.
+//!
+//! Pareen gives you tools for composing animations that are parameterized by
+//! time (i.e. mappings from time to some animated value) without constantly
+//! having to pass around time variables; it hides the plumbing, so that you
+//! need to provide time only once: when evaluating the animation.
 //!
 //! Animations are composed similarly to Rust's iterators, so no memory
 //! allocations are necessary.
