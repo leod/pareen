@@ -19,7 +19,7 @@ allocations are necessary.
 ## Usage
 Just add this line to your dependencies in `Cargo.toml`:
 ```
-pareen = "0.1.0"
+pareen = "0.1"
 ```
 
 ## Examples
