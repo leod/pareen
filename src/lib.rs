@@ -63,7 +63,7 @@ where
     /// Turn `(2.0 * t)` into `(2.0 * t).sqrt() + 2.0 * t`:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim = pareen::proportional(2.0f32).map(|value| value.sqrt() + value);
+    /// let anim = pareen::prop(2.0f32).map(|value| value.sqrt() + value);
     ///
     /// assert_approx_eq!(anim.eval(1.0), 2.0f32.sqrt() + 2.0);
     /// ```
@@ -187,11 +187,11 @@ where
     /// `next` will see time starting at zero once it plays.
     ///
     /// # Example
-    /// Stay at value `5.0` for ten seconds, then increase value proportionally:
+    /// Stay at value `5.0` for ten seconds, then increase value proply:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
     /// let anim_1 = pareen::constant(5.0f32);
-    /// let anim_2 = pareen::proportional(2.0f32) + 5.0;
+    /// let anim_2 = pareen::prop(2.0f32) + 5.0;
     /// let anim = anim_1.seq(10.0, anim_2);
     ///
     /// assert_approx_eq!(anim.eval(0.0), 5.0);
@@ -218,7 +218,7 @@ where
     ///
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim = pareen::proportional(2.0f32).backwards(1.0);
+    /// let anim = pareen::prop(2.0f32).backwards(1.0);
     ///
     /// assert_approx_eq!(anim.eval(0.0f32), 2.0);
     /// assert_approx_eq!(anim.eval(1.0f32), 0.0);
@@ -447,12 +447,12 @@ pub fn constant<T, V: Copy>(c: V) -> Anim<impl Fun<T = T, V = V>> {
 /// Scale time with a factor of three:
 /// ```
 /// # use assert_approx_eq::assert_approx_eq;
-/// let anim = pareen::proportional(3.0f32);
+/// let anim = pareen::prop(3.0f32);
 ///
 /// assert_approx_eq!(anim.eval(0.0f32), 0.0);
 /// assert_approx_eq!(anim.eval(3.0), 9.0);
 /// ```
-pub fn proportional<T, V, W>(m: V) -> Anim<impl Fun<T = T, V = W>>
+pub fn prop<T, V, W>(m: V) -> Anim<impl Fun<T = T, V = W>>
 where
     V: Copy + Mul<Output = W> + From<T>,
 {
@@ -461,7 +461,7 @@ where
 
 /// An animation that returns time as its value.
 ///
-/// This is the same as [`proportional`](struct.Anim.html#method.proportional) with
+/// This is the same as [`prop`](struct.Anim.html#method.prop) with
 /// a factor of one.
 ///
 /// # Examples
@@ -491,7 +491,7 @@ where
     T: Float,
     V: Float + FloatConst + From<T>,
 {
-    proportional(V::PI() * (V::one() + V::one()))
+    prop(V::PI() * (V::one() + V::one()))
 }
 
 pub fn half_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
@@ -499,7 +499,7 @@ where
     T: Float,
     V: Float + FloatConst + From<T>,
 {
-    proportional(V::PI())
+    prop(V::PI())
 }
 
 pub fn quarter_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
@@ -507,7 +507,7 @@ where
     T: Float,
     V: Float + FloatConst + From<T>,
 {
-    proportional(V::PI() * (V::one() / (V::one() + V::one())))
+    prop(V::PI() * (V::one() / (V::one() + V::one())))
 }
 
 pub fn cond_t<T, V, F, G, H, Cond, A, B>(cond: Cond, a: A, b: B) -> Anim<impl Fun<T = T, V = V>>
