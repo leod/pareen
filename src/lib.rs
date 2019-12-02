@@ -42,6 +42,9 @@ use std::ops::{Add, Mul, Neg, RangeInclusive, Sub};
 
 use num_traits::{Float, FloatConst, Num, One};
 
+#[cfg(feature = "easer")]
+use easer::functions::Easing;
+
 /// A `Fun` represents anything that maps from some type `T` to another
 /// type `V`.
 ///
@@ -688,6 +691,69 @@ macro_rules! anim_match {
             )*
         })
     }
+}
+
+/// Integrate an easing in function from the `easer` library.
+///
+/// This is only available when enabling the `easer` feature for `pareen`.
+///
+/// # Arguments
+///
+/// * `start` - The start value for the easing function.
+/// * `delta` - The change in the value from beginning to end time.
+/// * `duration` - The total time between beginning and end.
+///
+/// # See also
+/// Documentation for [`easer::functions::Easing`](https://docs.rs/easer/0.2.1/easer/functions/trait.Easing.html).
+#[cfg(feature = "easer")]
+pub fn ease_in<E, V>(start: V, delta: V, duration: V) -> Anim<impl Fun<T = V, V = V>>
+where
+    V: Float,
+    E: Easing<V>,
+{
+    fun(move |t| E::ease_in(t, start, delta, duration))
+}
+
+/// Integrate an easing out function from the `easer` library.
+///
+/// This is only available when enabling the `easer` feature for `pareen`.
+///
+/// # Arguments
+///
+/// * `start` - The start value for the easing function.
+/// * `delta` - The change in the value from beginning to end time.
+/// * `duration` - The total time between beginning and end.
+///
+/// # See also
+/// Documentation for [`easer::functions::Easing`](https://docs.rs/easer/0.2.1/easer/functions/trait.Easing.html).
+#[cfg(feature = "easer")]
+pub fn ease_out<E, V>(start: V, delta: V, duration: V) -> Anim<impl Fun<T = V, V = V>>
+where
+    V: Float,
+    E: Easing<V>,
+{
+    fun(move |t| E::ease_out(t, start, delta, duration))
+}
+
+/// Integrate an easing in-out function from the `easer` library.
+///
+/// This is only available when enabling the `easer` feature for `pareen`.
+///
+/// # Arguments
+///
+/// * `start` - The start value for the easing function.
+/// * `delta` - The change in the value from beginning to end time.
+/// * `duration` - The total time between beginning and end.
+///
+/// # See also
+/// Documentation for [`easer::functions::Easing`](https://docs.rs/easer/0.2.1/easer/functions/trait.Easing.html).
+#[cfg(feature = "easer")]
+pub fn ease_in_out<E, V>(start: V, delta: V, duration: V) -> Anim<impl Fun<T = V, V = V>>
+where
+    V: Float,
+    E: Easing<V>,
+{
+    fun(move |t| E::ease_in_out(t, start, delta, duration))
 }
 
 impl<T, V, F> From<F> for Anim<WrapFn<T, V, F>>
