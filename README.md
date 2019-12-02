@@ -1,4 +1,8 @@
 # Pareen
+[![Docs Status](https://docs.rs/pareen/badge.svg)](https://docs.rs/pareen)
+[![license](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/leod/pareen/blob/master/LICENSE)
+[![Crates.io](https://img.shields.io/crates/v/pareen.svg)](https://crates.io/crates/pareen)
+
 Pareen is a small Rust library for *par*ameterized inbetw*een*ing.
 
 The intended application is in game programming, where you sometimes have 
