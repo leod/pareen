@@ -14,6 +14,10 @@ Animations are composed similarly to Rust's iterators, so no memory
 allocations are necessary.
 
 ## Usage
+Just add this line to your dependencies in `Cargo.toml`:
+```
+pareen = "0.1.0"
+```
 
 ## Examples
 ```rust
