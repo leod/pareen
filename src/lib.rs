@@ -1,13 +1,12 @@
-//! Parameterized inbetweening.
+//! Pareen is a small library for *par*ameterized inbetw*een*ing.
 //!
-//! Pareen is a combinator library allowing you to compose animations that are
-//! parameterized by time, i.e. mappings from time to some animated value. The
-//! intended application is in game programming, where you often have two
-//! discrete game states between which you want to transition smoothly.
-//!
-//! Pareen gives you tools for combining animations without constantly having
-//! to pass around time variables. Pareen hides the plumbing, so that you need
-//! to provide time only once: when evaluating the animation.
+//! Pareen allows you to compose animations that are parameterized by time, i.e.
+//! mappings from time to some animated value. Its intended application is in
+//! game programming, where you sometimes have two discrete game states between
+//! which you want to transition smoothly. Pareen gives you tools for combining
+//! animations without constantly having to pass around time variables; it
+//! hides the plumbing, so that you need to provide time only once: when
+//! evaluating the animation.
 
 use std::marker::PhantomData;
 use std::ops::{Add, Mul, Neg, RangeInclusive, Sub};
@@ -15,14 +14,16 @@ use std::ops::{Add, Mul, Neg, RangeInclusive, Sub};
 use num_traits::{Float, FloatConst, Num, One, Zero};
 
 /// A `Fun` represents anything that maps from some type `T` to another
-/// type `V`. Here, `T` usually stands for time and `V` for some value that
-/// is parameterized by time.
+/// type `V`.
+///
+/// `T` usually stands for time and `V` for some value that is parameterized by
+/// time.
 ///
 /// ## Implementation details
-/// The only reason that we need this type instead of just using `Fn(T) -> V`
+/// The only reason that we define this trait instead of just using `Fn(T) -> V`
 /// is so that the library works in stable rust. Having this type allows us to
 /// implement e.g. `std::ops::Add` for [`Anim<F>`](struct.Anim.html) where
-/// `F: Fun`. Without this type, it becomes difficult (impossible?) to provide
+/// `F: Fun`. Without this trait, it becomes difficult (impossible?) to provide
 /// a name for `Add::Output`, unless you have the unstable feature
 /// `type_alias_impl_trait` or `fn_traits`.
 ///
@@ -30,18 +31,18 @@ use num_traits::{Float, FloatConst, Num, One, Zero};
 /// types of `Fun`. The main reason is that this makes types smaller for the
 /// user of the library. I have not observed any downsides to this yet.
 pub trait Fun {
-    /// The funtion's input type. Usually time.
+    /// The function's input type. Usually time.
     type T;
 
-    /// The funtion's output type.
+    /// The function's output type.
     type V;
 
-    /// Evaluate the funtion at time `t`.
+    /// Evaluate the function at time `t`.
     fn eval(&self, t: Self::T) -> Self::V;
 }
 
 /// `Anim` is the main type provided by pareen. It is a simple wrapper around
-/// some type implementing [`Fun`](trait.Fun.html).
+/// any type implementing [`Fun`](trait.Fun.html).
 #[derive(Clone, Debug)]
 pub struct Anim<F>(F);
 
@@ -49,29 +50,32 @@ impl<F> Anim<F>
 where
     F: Fun,
 {
-    /// Transform an animation so that it applies a given funtion to its
+    /// Evaluate the animation at time `t`.
+    pub fn eval(&self, t: F::T) -> F::V {
+        self.0.eval(t)
+    }
+
+    /// Transform an animation so that it applies a given function to its
     /// values.
     ///
     /// # Example
     ///
+    /// Turn `(2.0 * t)` into `(2.0 * t).sqrt() + 2.0 * t`:
     /// ```
-    /// // This is just `(2.0 * t).sqrt() + 2.0 * t`, given time `t`.
-    /// let anim = pareen::proportional(2.0).map(|value| value.sqrt() + value);
+    /// let anim = pareen::proportional(2.0f32).map(|value| value.sqrt() + value);
     /// ```
     pub fn map<W>(self, f: impl Fn(F::V) -> W) -> Anim<impl Fun<T = F::T, V = W>> {
         self.map_anim(fun(f))
     }
 
     /// Transform an animation so that it modifies time according to the given
-    /// funtion before evaluating the animation.
+    /// function before evaluating the animation.
     ///
     /// # Example
-    ///
+    /// Run an animation two times slower:
     /// ```
-    /// let anim = pareen::cubic(1.0, 1.0, 1.0);
-    ///
-    /// // Run animation two times slower.
-    /// let slower_anim = anim.map_time(|t| t / 2.0);
+    /// let anim = pareen::cubic(&[1.0, 1.0, 1.0, 1.0]);
+    /// let slower_anim = anim.map_time(|t: f32| t / 2.0);
     /// ```
     pub fn map_time<S>(self, f: impl Fn(S) -> F::T) -> Anim<impl Fun<T = S, V = F::V>> {
         self.map_time_anim(fun(f))
@@ -93,18 +97,6 @@ where
     {
         let anim = anim.into();
         fun(move |t| self.eval(anim.eval(t)))
-    }
-}
-
-impl<F> Fun for Anim<F>
-where
-    F: Fun,
-{
-    type T = F::T;
-    type V = F::V;
-
-    fn eval(&self, t: F::T) -> F::V {
-        self.0.eval(t)
     }
 }
 
@@ -139,17 +131,27 @@ where
     F::T: Copy + PartialOrd,
 {
     /// Concatenate `self` with another animation in time, using `self` until
-    /// time `self_end` (inclusive), and then switching to `next`.
+    /// time `self_end` (non-inclusive), and then switching to `next`.
     ///
     /// # Example
-    /// This can be used for piecewise combinations of funtions.
+    /// Switch from one constant value to another:
+    /// ```
+    /// # use assert_approx_eq::assert_approx_eq;
+    /// let anim = pareen::constant(1.0f32).switch(0.5f32, 2.0);
+    ///
+    /// assert_approx_eq!(anim.eval(0.0), 1.0);
+    /// assert_approx_eq!(anim.eval(0.5), 2.0);
+    /// assert_approx_eq!(anim.eval(42.0), 2.0);
+    /// ```
+    ///
+    /// Piecewise combinations of functions:
     /// ```
     /// let cubic_1 = pareen::cubic(&[4.4034, 0.0, -4.5455e-2, 0.0]);
     /// let cubic_2 = pareen::cubic(&[-1.2642e1, 2.0455e1, -8.1364, 1.0909]);
     /// let cubic_3 = pareen::cubic(&[1.6477e1, -4.9432e1, 4.7773e1, -1.3818e1]);
     ///
-    /// // Use `cubic_1` for [0.0, 0.4], `cubic_2` for (0.4, 0.8]` and
-    /// // `cubic_3` for `(0.8, ..]`.
+    /// // Use `cubic_1` for [0.0, 0.4), `cubic_2` for [0.4, 0.8)` and
+    /// // `cubic_3` for `[0.8, ..)`.
     /// let anim = cubic_1.switch(0.4, cubic_2).switch(0.8, cubic_3);
     /// ```
     pub fn switch<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
@@ -157,7 +159,7 @@ where
         G: Fun<T = F::T, V = F::V>,
         A: Into<Anim<G>>,
     {
-        cond_t(fun(move |t| t <= self_end), self, next)
+        cond_t(fun(move |t| t < self_end), self, next)
     }
 }
 
@@ -176,14 +178,14 @@ where
     F: Fun,
     F::T: Copy + PartialOrd + Sub<Output = F::T>,
 {
-    /// Play two animations in `sequence`, first playing `self` until time
+    /// Play two animations in sequence, first playing `self` until time
     /// `self_end`, and then switching to `next`. Note that `next` will see
     /// time starting at zero once it plays.
     ///
     /// # Example
+    /// Stay at value `5.0` for ten seconds, then increase value proportionally:
     /// ```
-    /// // Stay at value 5.0 for 10 seconds, then increase value proportionally.
-    /// let anim_1 = pareen::constant(5.0).seq(pareen::proportional(2.0) + 5.0);
+    /// let anim_1 = pareen::constant(5.0).seq(10.0, pareen::proportional(2.0) + 5.0);
     /// ```
     pub fn seq<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
@@ -211,7 +213,7 @@ where
     F::T: Copy,
     F::V: Copy + Num,
 {
-    /// Given animation values in `[0.0 .. 1.0]`, this funtion transforms the
+    /// Given animation values in `[0.0 .. 1.0]`, this function transforms the
     /// values so that they are in `[min .. max]`.
     pub fn scale_min_max(self, min: F::V, max: F::V) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self * (max - min) + min
@@ -277,6 +279,27 @@ where
     F::T: Copy + Mul<W, Output = W>,
     F::V: Copy + Add<W, Output = F::V> + Sub<Output = W>,
 {
+    /// Linearly interpolate between two animations, starting at time zero and
+    /// finishing at time one.
+    ///
+    /// # Examples
+    ///
+    /// Linearly interpolate between two constant values:
+    /// ```
+    /// # use assert_approx_eq::assert_approx_eq;
+    /// let anim = pareen::constant(5.0f32).lerp(10.0);
+    ///
+    /// assert_approx_eq!(anim.eval(0.0f32), 5.0);
+    /// assert_approx_eq!(anim.eval(0.5), 7.5);
+    /// assert_approx_eq!(anim.eval(1.0), 10.0);
+    /// assert_approx_eq!(anim.eval(2.0), 15.0);
+    /// ```
+    ///
+    /// It is also possible to linearly interpolate between two animations:
+    /// ```
+    /// let anim = pareen::full_circle().sin().lerp(pareen::full_circle().cos());
+    /// let value: f32 = anim.eval(0.5f32);
+    /// ```
     pub fn lerp<G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
@@ -330,6 +353,16 @@ where
     }
 }
 
+/// Turn any function `Fn(T) -> V` into an [`Anim`](struct.Anim.html).
+///
+/// # Example
+/// ```
+/// fn my_crazy_function(t: f32) -> f32 {
+///     42.0
+/// }
+///
+/// let anim = pareen::fun(my_crazy_function);
+/// ```
 pub fn fun<T, V>(f: impl Fn(T) -> V) -> Anim<impl Fun<T = T, V = V>> {
     From::from(f)
 }
@@ -346,12 +379,18 @@ pub fn zero<T, V: Copy + Zero>() -> Anim<impl Fun<T = T, V = V>> {
     constant(V::zero())
 }
 
-pub fn proportional<T, V>(m: V) -> Anim<impl Fun<T = T, V = V>>
+pub fn proportional<T, V, W>(m: V) -> Anim<impl Fun<T = T, V = W>>
 where
-    T: Float,
-    V: Float + From<T>,
+    V: Copy + Mul<Output = W> + From<T>,
 {
     fun(move |t| m * From::from(t))
+}
+
+pub fn id<T, V>() -> Anim<impl Fun<T = T, V = V>>
+where
+    V: From<T>,
+{
+    fun(move |t| From::from(t))
 }
 
 pub fn full_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
@@ -544,6 +583,7 @@ where
     }
 }
 
+#[doc(hidden)]
 pub struct ConstantClosure<T, V>(V, PhantomData<T>);
 
 impl<T, V> Fun for ConstantClosure<T, V>
@@ -577,6 +617,7 @@ where
     }
 }
 
+#[doc(hidden)]
 pub struct AddClosure<F, G>(F, G);
 
 impl<F, G> Fun for AddClosure<F, G>
@@ -594,6 +635,7 @@ where
     }
 }
 
+#[doc(hidden)]
 pub struct MulClosure<F, G>(F, G);
 
 impl<F, G> Fun for MulClosure<F, G>
@@ -611,6 +653,7 @@ where
     }
 }
 
+#[doc(hidden)]
 pub struct NegClosure<F>(F);
 
 impl<F> Fun for NegClosure<F>
