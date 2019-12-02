@@ -1,6 +1,6 @@
 //! Pareen is a small library for *par*ameterized inbetw*een*ing.
 //!
-//! Its intended application is in game programming, where you sometimes have
+//! The intended application is in game programming, where you sometimes have
 //! two discrete game states between which you want to transition smoothly
 //! for visualization purposes.
 //!

@@ -1,4 +1,4 @@
-use gnuplot::{AutoOption, AxesCommon, Color, Figure};
+use gnuplot::{AutoOption, AxesCommon, Color, Figure, LineWidth};
 
 fn main() {
     let mut plots = Plots { plots: Vec::new() };
@@ -82,7 +82,7 @@ impl Plots {
         for (i, plot) in self.plots.iter().enumerate() {
             figure
                 .axes2d()
-                .lines(&plot.ts, &plot.vs, &[Color("blue")])
+                .lines(&plot.ts, &plot.vs, &[Color("blue"), LineWidth(3.0)])
                 .set_title(&plot.name, &[])
                 .set_x_label("time", &[])
                 .set_y_label("value", &[])
