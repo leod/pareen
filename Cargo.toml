@@ -6,3 +6,6 @@ edition = "2018"
 
 [dependencies]
 num-traits = "0.2"
+
+[dev-dependencies]
+assert_approx_eq = "1.0"
