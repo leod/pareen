@@ -5,4 +5,4 @@ authors = ["leod <subtle.frustration@proton.me>"]
 edition = "2018"
 
 [dependencies]
-num_traits = "0.2"
+num-traits = "0.2"

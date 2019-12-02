@@ -1,15 +1,47 @@
+//! Parameterized inbetweening.
+//!
+//! Pareen is a combinator library allowing you to compose animations that are
+//! parameterized by time, i.e. mappings from time to some animated value. The
+//! intended application is in game programming, where you often have two
+//! discrete game states between which you want to transition smoothly.
+//!
+//! Pareen gives you tools for combining animations without constantly having 
+//! to pass around time variables. Pareen hides the plumbing, so that you need
+//! to provide time only once: when evaluating the animation.
+
 use std::marker::PhantomData;
 use std::ops::{Add, Mul, Neg, RangeInclusive, Sub};
 
 use num_traits::{Float, FloatConst, Num, One, Zero};
 
+/// A `Fun` represents anything that maps from some type `T` to another
+/// type `V`. Here, `T` usually stands for time and `V` for some value that
+/// is parameterized by time.
+///
+/// ## Implementation details
+/// The only reason that we need this type instead of just using `Fn(T) -> V`
+/// is so that the library works in stable rust. Having this type allows us to
+/// implement e.g. `std::ops::Add` for [`Anim<F>`](struct.Anim.html) where
+/// `F: Fun`. Without this type, it becomes difficult (impossible?) to provide
+/// a name for `Add::Output`, unless you have the unstable feature
+/// `type_alias_impl_trait` or `fn_traits`.
+///
+/// In contrast to `std::ops::FnOnce`, both input _and_ output are associated
+/// types of `Fun`. The main reason is that this makes types smaller for the
+/// user of the library. I have not observed any downsides to this yet.
 pub trait Fun {
+    /// The function's input type. Usually time.
     type T;
+
+    /// The function's output type.
     type V;
 
+    /// Evaluate the function at time `t`.
     fn eval(&self, t: Self::T) -> Self::V;
 }
 
+/// `Anim` is the main type provided by pareen. It is a simple wrapper around
+/// some type implementing [`Fun`](trait.Fun.html).
 #[derive(Clone, Debug)]
 pub struct Anim<F>(F);
 
@@ -17,8 +49,32 @@ impl<F> Anim<F>
 where
     F: Fun,
 {
+    /// Transform an animation so that it applies a given function to its
+    /// values.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// // This is just `(2.0 * t).sqrt() + 2.0 * t`, given time `t`.
+    /// let anim = pareen::proportional(2.0).map(|value| value.sqrt() + value);
+    /// ```
     pub fn map<W>(self, f: impl Fn(F::V) -> W) -> Anim<impl Fun<T = F::T, V = W>> {
         self.map_anim(func(f))
+    }
+
+    /// Transform an animation so that it modifies time according to the given
+    /// function before evaluating the animation.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// let anim = pareen::cubic(1.0, 1.0, 1.0);
+    ///
+    /// // Run animation two times slower.
+    /// let slower_anim = anim.map_time(|t| t / 2.0);
+    /// ```
+    pub fn map_time<S>(self, f: impl Fn(S) -> F::T) -> Anim<impl Fun<T = S, V = F::V>> {
+        self.map_time_anim(func(f))
     }
 
     pub fn map_anim<W, G, A>(self, anim: A) -> Anim<impl Fun<T = F::T, V = W>>
@@ -28,10 +84,6 @@ where
     {
         let anim = anim.into();
         func(move |t| anim.eval(self.eval(t)))
-    }
-
-    pub fn map_time<S>(self, f: impl Fn(S) -> F::T) -> Anim<impl Fun<T = S, V = F::V>> {
-        self.map_time_anim(func(f))
     }
 
     pub fn map_time_anim<S, G, A>(self, anim: A) -> Anim<impl Fun<T = S, V = F::V>>
@@ -61,6 +113,8 @@ where
     F: Fun,
     F::T: Copy,
 {
+    /// Combine two animations into one, yielding an animation having pairs as
+    /// the values.
     pub fn zip<W, G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = (F::V, W)>>
     where
         G: Fun<T = F::T, V = W>,
@@ -86,6 +140,20 @@ where
     F: Fun,
     F::T: Copy + PartialOrd,
 {
+    /// Concatenate `self` with another animation in time, using `self` until
+    /// time `self_end` (inclusive), and then switching to `next`.
+    ///
+    /// # Example
+    /// This can be used for piecewise combinations of functions.
+    /// ```
+    /// let cubic_1 = pareen::cubic(&[4.4034, 0.0, -4.5455e-2, 0.0]);
+    /// let cubic_2 = pareen::cubic(&[-1.2642e1, 2.0455e1, -8.1364, 1.0909]);
+    /// let cubic_3 = pareen::cubic(&[1.6477e1, -4.9432e1, 4.7773e1, -1.3818e1]);
+    ///
+    /// // Use `cubic_1` for [0.0, 0.4], `cubic_2` for (0.4, 0.8]` and
+    /// // `cubic_3` for `(0.8, ..]`.
+    /// let anim = cubic_1.switch(0.4, cubic_2).switch(0.8, cubic_3);
+    /// ```
     pub fn switch<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
@@ -110,6 +178,15 @@ where
     F: Fun,
     F::T: Copy + PartialOrd + Sub<Output = F::T>,
 {
+    /// Play two animations in `sequence`, first playing `self` until time
+    /// `self_end`, and then switching to `next`. Note that `next` will see
+    /// time starting at zero once it plays.
+    ///
+    /// # Example
+    /// ```
+    /// // Stay at value 5.0 for 10 seconds, then increase value proportionally.
+    /// let anim_1 = pareen::constant(5.0).seq(pareen::proportional(2.0) + 5.0);
+    /// ```
     pub fn seq<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
@@ -124,6 +201,7 @@ where
     F: Fun,
     F::T: Copy + Sub<Output = F::T>,
 {
+    /// Play an animation backwards, starting at time `end`.
     pub fn backwards(self, end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
         func(move |t| self.eval(end - t))
     }
@@ -135,6 +213,8 @@ where
     F::T: Copy,
     F::V: Copy + Num,
 {
+    /// Given animation values in `[0.0 .. 1.0]`, this function transforms the
+    /// values so that they are in `[min .. max]`.
     pub fn scale_min_max(self, min: F::V, max: F::V) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self * (max - min) + min
     }
@@ -145,22 +225,27 @@ where
     F: Fun,
     F::V: Float,
 {
+    /// Apply `Float::sin` to the animation values.
     pub fn sin(self) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self.map(Float::sin)
     }
 
+    /// Apply `Float::cos` to the animation values.
     pub fn cos(self) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self.map(Float::cos)
     }
 
+    /// Apply `Float::abs` to the animation values.
     pub fn abs(self) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self.map(Float::abs)
     }
 
+    /// Apply `Float::powf` to the animation values.
     pub fn powf(self, e: F::V) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self.map(move |v| v.powf(e))
     }
 
+    /// Apply `Float::powi` to the animation values.
     pub fn powi(self, n: i32) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self.map(move |v| v.powi(n))
     }
