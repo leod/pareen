@@ -554,6 +554,9 @@ where
     ///     second_anim,
     /// );
     /// ```
+    /// The animation will look like this:
+    ///
+    /// ![plot for seq_ease_in_out](https://raw.githubusercontent.com/leod/pareen/master/images/seq_ease_in_out.png)
     pub fn seq_ease_in_out<E, G, A>(
         self,
         self_end: V,
