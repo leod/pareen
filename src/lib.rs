@@ -304,7 +304,7 @@ where
     /// # use assert_approx_eq::assert_approx_eq;
     ///
     /// // Zero to 2pi in one second
-    /// let angle = pareen::full_circle();
+    /// let angle = pareen::circle();
     ///
     /// // Zero to 2pi from time 0.5 to 1.0
     /// let anim = angle.squeeze(42.0f32, 0.5..=1.0);
@@ -355,7 +355,7 @@ where
     /// It is also possible to linearly interpolate between two non-constant
     /// animations:
     /// ```
-    /// let anim = pareen::full_circle().sin().lerp(pareen::full_circle().cos());
+    /// let anim = pareen::circle().sin().lerp(pareen::circle().cos());
     /// let value: f32 = anim.eval(0.5f32);
     /// ```
     pub fn lerp<G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = F::V>>
@@ -486,7 +486,7 @@ where
     fun(move |t| From::from(t))
 }
 
-pub fn full_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
+pub fn circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
     T: Float,
     V: Float + FloatConst + From<T>,
