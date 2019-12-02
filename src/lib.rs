@@ -577,6 +577,25 @@ where
     F: Fun<V = Option<V>>,
     F::T: Copy,
 {
+    /// Unwrap an animation of optional values.
+    ///
+    /// At any time, returns the animation value if it is not `None`, or the
+    /// given `default` value otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let anim1 = pareen::constant(Some(42)).unwrap_or(-1);
+    /// assert_eq!(anim1.eval(2), 42);
+    /// assert_eq!(anim1.eval(3), 42);
+    /// ```
+    ///
+    /// ```
+    /// let cond = pareen::fun(|t| t % 2 == 0);
+    /// let anim1 = pareen::cond(cond, Some(42), None).unwrap_or(-1);
+    /// assert_eq!(anim1.eval(2), 42);
+    /// assert_eq!(anim1.eval(3), -1);
+    /// ```
     pub fn unwrap_or<G, A>(self, default: A) -> Anim<impl Fun<T = F::T, V = V>>
     where
         G: Fun<T = F::T, V = V>,
@@ -586,6 +605,33 @@ where
             .map(|(v, default)| v.unwrap_or(default))
     }
 
+    /// Applies a function to the contained value (if any), or returns the
+    /// provided default (if not).
+    ///
+    /// Note that the function `f` itself returns an animation.
+    ///
+    /// # Example
+    ///
+    /// Animate a player's position offset if it is moving:
+    /// ```
+    /// # use assert_approx_eq::assert_approx_eq;
+    /// fn my_offset_anim(
+    ///     move_dir: Option<f32>
+    /// ) -> pareen::Anim<impl pareen::Fun<T = f32, V = f32>> {
+    ///     let move_speed = 2.0f32;
+    ///
+    ///     pareen::constant(move_dir).map_or(
+    ///         0.0,
+    ///         move |move_dir| pareen::prop(move_dir) * move_speed,
+    ///     )
+    /// }
+    ///
+    /// let move_anim = my_offset_anim(Some(1.0));
+    /// let stay_anim = my_offset_anim(None);
+    ///
+    /// assert_approx_eq!(move_anim.eval(0.5), 1.0);
+    /// assert_approx_eq!(stay_anim.eval(0.5), 0.0);
+    /// ```
     pub fn map_or<W, G, H, A>(
         self,
         default: A,
