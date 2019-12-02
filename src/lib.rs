@@ -619,7 +619,7 @@ where
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
     /// fn my_offset_anim(
-    ///     move_dir: Option<f32>
+    ///     move_dir: Option<f32>,
     /// ) -> pareen::Anim<impl pareen::Fun<T = f32, V = f32>> {
     ///     let move_speed = 2.0f32;
     ///
