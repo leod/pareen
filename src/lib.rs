@@ -683,7 +683,7 @@ pub fn id<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
     V: From<T>,
 {
-    fun(move |t| From::from(t))
+    fun(From::from)
 }
 
 /// Proportionally increase value from zero to 2π.
