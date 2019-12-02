@@ -438,7 +438,8 @@ where
     }
 
     /// Play two animations in sequence, transitioning between them with an
-    /// easing-in function from `easer`.
+    /// easing-in function from
+    /// [`easer`](https://docs.rs/easer/0.2.1/easer/index.html).
     ///
     /// This is only available when enabling the `easer` feature for `pareen`.
     ///
@@ -478,7 +479,8 @@ where
     }
 
     /// Play two animations in sequence, transitioning between them with an
-    /// easing-out function from `easer`.
+    /// easing-out function from
+    /// [`easer`](https://docs.rs/easer/0.2.1/easer/index.html).
     ///
     /// This is only available when enabling the `easer` feature for `pareen`.
     ///
@@ -518,7 +520,8 @@ where
     }
 
     /// Play two animations in sequence, transitioning between them with an
-    /// easing-in-out function from `easer`.
+    /// easing-in-out function from
+    /// [`easer`](https://docs.rs/easer/0.2.1/easer/index.html).
     ///
     /// This is only available when enabling the `easer` feature for `pareen`.
     ///
@@ -901,7 +904,8 @@ macro_rules! anim_match {
     }
 }
 
-/// Integrate an easing-in function from the `easer` library.
+/// Integrate an easing-in function from the
+/// [`easer`](https://docs.rs/easer/0.2.1/easer/index.html) library.
 ///
 /// This is only available when enabling the `easer` feature for `pareen`.
 ///
@@ -922,7 +926,8 @@ where
     fun(move |t| E::ease_in(t, start, delta, duration))
 }
 
-/// Integrate an easing-out function from the `easer` library.
+/// Integrate an easing-out function from the
+/// [`easer`](https://docs.rs/easer/0.2.1/easer/index.html) library.
 ///
 /// This is only available when enabling the `easer` feature for `pareen`.
 ///
@@ -943,7 +948,8 @@ where
     fun(move |t| E::ease_out(t, start, delta, duration))
 }
 
-/// Integrate an easing-in-out function from the `easer` library.
+/// Integrate an easing-in-out function from the
+/// [`easer`](https://docs.rs/easer/0.2.1/easer/index.html) library.
 ///
 /// This is only available when enabling the `easer` feature for `pareen`.
 ///
