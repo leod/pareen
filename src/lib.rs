@@ -626,15 +626,41 @@ where
     })
 }
 
+/// Build an animation that depends on matching some expression.
+///
+/// Importantly, this macro allows returning animations of a different type in
+/// each match arm, which is not possible with a normal `match` expression.
+///
+/// # Example
+/// ```
+/// # use assert_approx_eq::assert_approx_eq;
+/// enum MyPlayerState {
+///     Standing,
+///     Running,
+///     Jumping,
+/// }
+///
+/// fn my_anim(state: MyPlayerState) -> pareen::Anim<impl pareen::Fun<T = f64, V = f64>> {
+///     pareen::anim_match!(state;
+///         MyPlayerState::Standing => pareen::constant(0.0),
+///         MyPlayerState::Running => pareen::prop(1.0),
+///         MyPlayerState::Jumping => pareen::id().powi(2),
+///     )
+/// }
+///
+/// assert_approx_eq!(my_anim(MyPlayerState::Standing).eval(2.0), 0.0);
+/// assert_approx_eq!(my_anim(MyPlayerState::Running).eval(2.0), 2.0);
+/// assert_approx_eq!(my_anim(MyPlayerState::Jumping).eval(2.0), 4.0);
+/// ```
 #[macro_export]
 macro_rules! anim_match {
     (
         $expr:expr;
         $($pat:pat => $value:expr $(,)?)*
     ) => {
-        $crate::util::anim::fun(move |t| match $expr {
+        $crate::fun(move |t| match $expr {
             $(
-                $pat => ($crate::util::anim::Anim::from($value)).eval(t),
+                $pat => ($crate::Anim::from($value)).eval(t),
             )*
         })
     }
