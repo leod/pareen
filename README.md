@@ -60,3 +60,6 @@ There is an example that shows some animations as plots via [RustGnuplot](https:
 ```bash
 cargo run --example plots --feature easer
 ```
+
+If everything works, you should see something like this:
+![plots of the example/plots.rs animations](images/plots.png)
