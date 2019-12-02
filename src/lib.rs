@@ -305,13 +305,13 @@ where
     ///
     /// # Example
     ///
-    /// Go from zero to 2pi in half a second:
+    /// Go from zero to 2π in half a second:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// // Zero to 2pi in one second
+    /// // From zero to 2π in one second
     /// let angle = pareen::circle();
     ///
-    /// // Zero to 2pi from time 0.5 to 1.0
+    /// // From zero to 2π from time 0.5 to 1.0
     /// let anim = angle.squeeze(42.0f32, 0.5..=1.0);
     ///
     /// assert_approx_eq!(anim.eval(0.0f32), 42.0);
@@ -495,7 +495,7 @@ where
     fun(move |t| From::from(t))
 }
 
-/// Proportionally increase value from zero to 2pi.
+/// Proportionally increase value from zero to 2π.
 pub fn circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
     T: Float,
@@ -504,7 +504,7 @@ where
     prop(V::PI() * (V::one() + V::one()))
 }
 
-/// Proportionally increase value from zero to pi.
+/// Proportionally increase value from zero to π.
 pub fn half_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
     T: Float,
@@ -513,7 +513,7 @@ where
     prop(V::PI())
 }
 
-/// Proportionally increase value from zero to pi/2.
+/// Proportionally increase value from zero to π/2.
 pub fn quarter_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
     T: Float,
