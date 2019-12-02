@@ -5,7 +5,7 @@
 //! intended application is in game programming, where you often have two
 //! discrete game states between which you want to transition smoothly.
 //!
-//! Pareen gives you tools for combining animations without constantly having 
+//! Pareen gives you tools for combining animations without constantly having
 //! to pass around time variables. Pareen hides the plumbing, so that you need
 //! to provide time only once: when evaluating the animation.
 
@@ -30,13 +30,13 @@ use num_traits::{Float, FloatConst, Num, One, Zero};
 /// types of `Fun`. The main reason is that this makes types smaller for the
 /// user of the library. I have not observed any downsides to this yet.
 pub trait Fun {
-    /// The function's input type. Usually time.
+    /// The funtion's input type. Usually time.
     type T;
 
-    /// The function's output type.
+    /// The funtion's output type.
     type V;
 
-    /// Evaluate the function at time `t`.
+    /// Evaluate the funtion at time `t`.
     fn eval(&self, t: Self::T) -> Self::V;
 }
 
@@ -49,7 +49,7 @@ impl<F> Anim<F>
 where
     F: Fun,
 {
-    /// Transform an animation so that it applies a given function to its
+    /// Transform an animation so that it applies a given funtion to its
     /// values.
     ///
     /// # Example
@@ -59,11 +59,11 @@ where
     /// let anim = pareen::proportional(2.0).map(|value| value.sqrt() + value);
     /// ```
     pub fn map<W>(self, f: impl Fn(F::V) -> W) -> Anim<impl Fun<T = F::T, V = W>> {
-        self.map_anim(func(f))
+        self.map_anim(fun(f))
     }
 
     /// Transform an animation so that it modifies time according to the given
-    /// function before evaluating the animation.
+    /// funtion before evaluating the animation.
     ///
     /// # Example
     ///
@@ -74,7 +74,7 @@ where
     /// let slower_anim = anim.map_time(|t| t / 2.0);
     /// ```
     pub fn map_time<S>(self, f: impl Fn(S) -> F::T) -> Anim<impl Fun<T = S, V = F::V>> {
-        self.map_time_anim(func(f))
+        self.map_time_anim(fun(f))
     }
 
     pub fn map_anim<W, G, A>(self, anim: A) -> Anim<impl Fun<T = F::T, V = W>>
@@ -83,7 +83,7 @@ where
         A: Into<Anim<G>>,
     {
         let anim = anim.into();
-        func(move |t| anim.eval(self.eval(t)))
+        fun(move |t| anim.eval(self.eval(t)))
     }
 
     pub fn map_time_anim<S, G, A>(self, anim: A) -> Anim<impl Fun<T = S, V = F::V>>
@@ -92,7 +92,7 @@ where
         A: Into<Anim<G>>,
     {
         let anim = anim.into();
-        func(move |t| self.eval(anim.eval(t)))
+        fun(move |t| self.eval(anim.eval(t)))
     }
 }
 
@@ -122,16 +122,14 @@ where
     {
         let other = other.into();
 
-        func(move |t| (self.eval(t), other.eval(t)))
+        fun(move |t| (self.eval(t), other.eval(t)))
     }
 
     pub fn bind<W, G>(self, f: impl Fn(F::V) -> Anim<G>) -> Anim<impl Fun<T = F::T, V = W>>
     where
         G: Fun<T = F::T, V = W>,
     {
-        func(move |t| {
-            f(self.eval(t)).eval(t)
-        })
+        fun(move |t| f(self.eval(t)).eval(t))
     }
 }
 
@@ -144,7 +142,7 @@ where
     /// time `self_end` (inclusive), and then switching to `next`.
     ///
     /// # Example
-    /// This can be used for piecewise combinations of functions.
+    /// This can be used for piecewise combinations of funtions.
     /// ```
     /// let cubic_1 = pareen::cubic(&[4.4034, 0.0, -4.5455e-2, 0.0]);
     /// let cubic_2 = pareen::cubic(&[-1.2642e1, 2.0455e1, -8.1364, 1.0909]);
@@ -159,7 +157,7 @@ where
         G: Fun<T = F::T, V = F::V>,
         A: Into<Anim<G>>,
     {
-        cond_t(func(move |t| t <= self_end), self, next)
+        cond_t(fun(move |t| t <= self_end), self, next)
     }
 }
 
@@ -203,7 +201,7 @@ where
 {
     /// Play an animation backwards, starting at time `end`.
     pub fn backwards(self, end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        func(move |t| self.eval(end - t))
+        fun(move |t| self.eval(end - t))
     }
 }
 
@@ -213,7 +211,7 @@ where
     F::T: Copy,
     F::V: Copy + Num,
 {
-    /// Given animation values in `[0.0 .. 1.0]`, this function transforms the
+    /// Given animation values in `[0.0 .. 1.0]`, this funtion transforms the
     /// values so that they are in `[min .. max]`.
     pub fn scale_min_max(self, min: F::V, max: F::V) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self * (max - min) + min
@@ -286,7 +284,7 @@ where
     {
         let other = other.into();
 
-        func(move |t| {
+        fun(move |t| {
             let a = self.eval(t);
             let b = other.eval(t);
 
@@ -302,15 +300,13 @@ where
     F: Fun<V = Option<V>>,
     F::T: Copy,
 {
-    pub fn unwrap_or<G, A>(
-        self,
-        default: A,
-    ) -> Anim<impl Fun<T = F::T, V = V>>
+    pub fn unwrap_or<G, A>(self, default: A) -> Anim<impl Fun<T = F::T, V = V>>
     where
         G: Fun<T = F::T, V = V>,
         A: Into<Anim<G>>,
     {
-        self.zip(default.into()).map(|(v, default)| v.unwrap_or(default))
+        self.zip(default.into())
+            .map(|(v, default)| v.unwrap_or(default))
     }
 
     pub fn map_or<W, G, H, A>(
@@ -327,19 +323,19 @@ where
 
         //self.bind(move |v| v.map_or(default, f))
 
-        func(move |t| {
+        fun(move |t| {
             self.eval(t)
                 .map_or_else(|| default.eval(t), |v| f(v).eval(t))
         })
     }
 }
 
-pub fn func<T, V>(f: impl Fn(T) -> V) -> Anim<impl Fun<T = T, V = V>> {
+pub fn fun<T, V>(f: impl Fn(T) -> V) -> Anim<impl Fun<T = T, V = V>> {
     From::from(f)
 }
 
 pub fn constant<T, V: Copy>(c: V) -> Anim<impl Fun<T = T, V = V>> {
-    func(move |_| c)
+    fun(move |_| c)
 }
 
 pub fn one<T, V: Copy + One>() -> Anim<impl Fun<T = T, V = V>> {
@@ -355,7 +351,7 @@ where
     T: Float,
     V: Float + From<T>,
 {
-    func(move |t| m * From::from(t))
+    fun(move |t| m * From::from(t))
 }
 
 pub fn full_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
@@ -396,7 +392,7 @@ where
     let a = a.into();
     let b = b.into();
 
-    func(move |t| if cond.eval(t) { a.eval(t) } else { b.eval(t) })
+    fun(move |t| if cond.eval(t) { a.eval(t) } else { b.eval(t) })
 }
 
 pub fn cond<T, V, F, G, A, B>(cond: bool, a: A, b: B) -> Anim<impl Fun<T = T, V = V>>
@@ -407,7 +403,7 @@ where
     A: Into<Anim<F>>,
     B: Into<Anim<G>>,
 {
-    cond_t(func(move |_| cond), a, b)
+    cond_t(fun(move |_| cond), a, b)
 }
 
 pub fn lerp<T, V, W, F, G, A, B>(a: A, b: B) -> Anim<impl Fun<T = T, V = V>>
@@ -426,7 +422,7 @@ pub fn cubic<T>(w: &[T; 4]) -> Anim<impl Fun<T = T, V = T> + '_>
 where
     T: Float,
 {
-    func(move |t| {
+    fun(move |t| {
         let t2 = t * t;
         let t3 = t2 * t;
 
@@ -440,7 +436,7 @@ macro_rules! anim_match {
         $expr:expr;
         $($pat:pat => $value:expr $(,)?)*
     ) => {
-        $crate::util::anim::func(move |t| match $expr {
+        $crate::util::anim::fun(move |t| match $expr {
             $(
                 $pat => ($crate::util::anim::Anim::from($value)).eval(t),
             )*
