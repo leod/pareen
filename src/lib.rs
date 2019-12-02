@@ -459,6 +459,10 @@ where
     ///     inference.
     /// * `ease_duration` - The amount of time to use for transitioning to `next`.
     /// * `next` - The animation to play after transitioning.
+    ///
+    /// # Example
+    ///
+    /// See [`seq_ease_in_out`](struct.Anim.html#method.seq_ease_in_out) for an example.
     pub fn seq_ease_in<E, G, A>(
         self,
         self_end: V,
@@ -495,6 +499,10 @@ where
     ///     inference.
     /// * `ease_duration` - The amount of time to use for transitioning to `next`.
     /// * `next` - The animation to play after transitioning.
+    ///
+    /// # Example
+    ///
+    /// See [`seq_ease_in_out`](struct.Anim.html#method.seq_ease_in_out) for an example.
     pub fn seq_ease_out<E, G, A>(
         self,
         self_end: V,
@@ -531,6 +539,21 @@ where
     ///     inference.
     /// * `ease_duration` - The amount of time to use for transitioning to `next`.
     /// * `next` - The animation to play after transitioning.
+    ///
+    /// # Example
+    ///
+    /// Play a constant value until time `0.5`, then transition for `0.3`
+    /// time units, using a cubic function, into a second animation:
+    /// ```
+    /// let first_anim = pareen::constant(2.0);
+    /// let second_anim = pareen::prop(1.0f32);
+    /// let anim = first_anim.seq_ease_in_out(
+    ///     0.4,
+    ///     easer::functions::Cubic,
+    ///     0.3,
+    ///     second_anim,
+    /// );
+    /// ```
     pub fn seq_ease_in_out<E, G, A>(
         self,
         self_end: V,
