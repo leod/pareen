@@ -4,7 +4,6 @@
 [![Crates.io](https://img.shields.io/crates/v/pareen.svg)](https://crates.io/crates/pareen)
 
 Pareen is a small Rust library for *par*ameterized inbetw*een*ing.
-
 The intended application is in game programming, where you sometimes have 
 two discrete game states between which you want to transition smoothly for
 visualization purposes.
