@@ -1,5 +1,5 @@
 # Changelog
-## Version 0.1.3 (2019-12-3)
+## Version 0.1.3 (2019-12-03)
 - Render README.md on crates.io
 
 ## Version 0.1.2 (2019-12-02)
