@@ -269,13 +269,6 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + PartialOrd + Sub<Output = F::T> + Float,
-{
-}
-
-impl<F> Anim<F>
-where
-    F: Fun,
     F::T: Copy + Sub<Output = F::T>,
 {
     /// Play an animation backwards, starting at time `end`.
