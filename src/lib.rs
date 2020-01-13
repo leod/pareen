@@ -211,6 +211,18 @@ where
     }
 
     /// Play `self` in time range `range`, and `surround` outside of the time range.
+    ///
+    /// # Examples
+    /// ```
+    /// # use assert_approx_eq::assert_approx_eq;
+    /// let anim = pareen::constant(10.0f32).surround(2.0..=5.0, 20.0);
+    ///
+    /// assert_approx_eq!(anim.eval(0.0), 20.0);
+    /// assert_approx_eq!(anim.eval(2.0), 10.0);
+    /// assert_approx_eq!(anim.eval(4.0), 10.0);
+    /// assert_approx_eq!(anim.eval(5.0), 10.0);
+    /// assert_approx_eq!(anim.eval(6.0), 20.0);
+    /// ```
     pub fn surround<G, A>(
         self,
         range: RangeInclusive<F::T>,
