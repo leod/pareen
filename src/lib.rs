@@ -412,9 +412,11 @@ where
     }
 
     /// Play two animations in sequence, first playing `self` until time
-    /// `self_end` (non-inclusive), and then switching to `next`. Both animations are
-    /// squeezed in time so that their time `[0 .. 1]` is shifted and scaled into the
-    /// ranges `[0 .. self_end]` and `[self_end .. 1]`.
+    /// `self_end` (non-inclusive), and then switching to `next`. The animations
+    /// are squeezed in time so that they fit into `[0 .. 1]` together.
+    ///
+    /// `self` is played in time `[0 .. self_end)`, and then `next` is played
+    /// in time [self_end .. 1]`.
     pub fn seq_squeeze<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
