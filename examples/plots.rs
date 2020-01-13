@@ -15,7 +15,7 @@ fn main() {
             .sin()
             .powi(2)
             .lerp(pareen::circle().cos())
-            .squeeze(0.0, 0.5..=1.0),
+            .squeeze_and_surround(0.5..=1.0, 0.0),
     );
     plots.add(
         "switch from 1 to 2 at time=0.5",
