@@ -420,8 +420,10 @@ where
         G: Fun<T = F::T, V = F::V>,
         A: Into<Anim<G>>,
     {
-        self.squeeze(Zero::zero()..=self_end)
-            .switch(self_end, next.into().squeeze(self_end..=One::one()))
+        let first = self.squeeze(Zero::zero()..=self_end);
+        let second = next.into().squeeze(self_end..=One::one());
+
+        first.switch(self_end, second)
     }
 }
 
