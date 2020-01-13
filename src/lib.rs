@@ -28,7 +28,7 @@
 //!     .lerp(pareen::circle().cos())
 //!     .scale_min_max(5.0, 10.0)
 //!     .backwards(1.0)
-//!     .squeeze(3.0, 0.5..=1.0);
+//!     .squeeze(0.5..=1.0);
 //!
 //! let anim4 = pareen::cubic(&[1.0, 2.0, 3.0, 4.0]) - anim3;
 //!
@@ -39,7 +39,7 @@
 use std::marker::PhantomData;
 use std::ops::{Add, Mul, Neg, RangeInclusive, Sub};
 
-use num_traits::{Float, FloatConst, Num, One};
+use num_traits::{Float, FloatConst, Num, One, Zero};
 
 #[cfg(feature = "easer")]
 use easer::functions::Easing;
@@ -209,6 +209,31 @@ where
     {
         cond(fun(move |t| t < self_end), self, next)
     }
+
+    /// Play `self` in time range `range`, and `surround` outside of the time range.
+    ///
+    /// # Examples
+    /// ```
+    /// # use assert_approx_eq::assert_approx_eq;
+    /// let anim = pareen::constant(10.0f32).surround(2.0..=5.0, 20.0);
+    ///
+    /// assert_approx_eq!(anim.eval(0.0), 20.0);
+    /// assert_approx_eq!(anim.eval(2.0), 10.0);
+    /// assert_approx_eq!(anim.eval(4.0), 10.0);
+    /// assert_approx_eq!(anim.eval(5.0), 10.0);
+    /// assert_approx_eq!(anim.eval(6.0), 20.0);
+    /// ```
+    pub fn surround<G, A>(
+        self,
+        range: RangeInclusive<F::T>,
+        surround: A,
+    ) -> Anim<impl Fun<T = F::T, V = F::V>>
+    where
+        G: Fun<T = F::T, V = F::V>,
+        A: Into<Anim<G>>,
+    {
+        cond(move |t| range.contains(&t), self, surround)
+    }
 }
 
 impl<F> Anim<F>
@@ -321,7 +346,6 @@ impl<F> Anim<F>
 where
     F: Fun,
     F::T: Copy + Float,
-    F::V: Copy,
 {
     /// Transform an animation in time, so that its time `[0 .. 1]` is shifted
     /// and scaled into the given `range`.
@@ -329,7 +353,35 @@ where
     /// In other words, this function can both delay and speed up or slow down a
     /// given animation.
     ///
-    /// For time inputs outside the `range`, the `default` value is returned.
+    /// # Example
+    ///
+    /// Go from zero to 2π in half a second:
+    /// ```
+    /// # use assert_approx_eq::assert_approx_eq;
+    /// // From zero to 2π in one second
+    /// let angle = pareen::circle::<f32, f32>();
+    ///
+    /// // From zero to 2π in time range [0.5 .. 1.0]
+    /// let anim = angle.squeeze(0.5..=1.0);
+    ///
+    /// assert_approx_eq!(anim.eval(0.5), 0.0);
+    /// assert_approx_eq!(anim.eval(1.0), std::f32::consts::PI * 2.0);
+    /// ```
+    pub fn squeeze(self, range: RangeInclusive<F::T>) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        let time_shift = *range.start();
+        let time_scale = F::T::one() / (*range.end() - *range.start());
+
+        self.map_time(move |t| (t - time_shift) * time_scale)
+    }
+
+    /// Transform an animation in time, so that its time `[0 .. 1]` is shifted
+    /// and scaled into the given `range`.
+    ///
+    /// In other words, this function can both delay and speed up or slow down a
+    /// given animation.
+    ///
+    /// For time outside of the given `range`, the `surround` animation is used
+    /// instead.
     ///
     /// # Example
     ///
@@ -339,27 +391,41 @@ where
     /// // From zero to 2π in one second
     /// let angle = pareen::circle();
     ///
-    /// // From zero to 2π from time 0.5 to 1.0
-    /// let anim = angle.squeeze(42.0f32, 0.5..=1.0);
+    /// // From zero to 2π in time range [0.5 .. 1.0]
+    /// let anim = angle.squeeze_and_surround(0.5..=1.0, 42.0);
     ///
-    /// assert_approx_eq!(anim.eval(0.0f32), 42.0);
+    /// assert_approx_eq!(anim.eval(0.0f32), 42.0f32);
     /// assert_approx_eq!(anim.eval(0.5), 0.0);
     /// assert_approx_eq!(anim.eval(1.0), std::f32::consts::PI * 2.0);
     /// assert_approx_eq!(anim.eval(1.1), 42.0);
     /// ```
-    pub fn squeeze(
+    pub fn squeeze_and_surround<G, A>(
         self,
-        default: F::V,
         range: RangeInclusive<F::T>,
-    ) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        let time_shift = *range.start();
-        let time_scale = F::T::one() / (*range.end() - *range.start());
+        surround: A,
+    ) -> Anim<impl Fun<T = F::T, V = F::V>>
+    where
+        G: Fun<T = F::T, V = F::V>,
+        A: Into<Anim<G>>,
+    {
+        self.squeeze(range.clone()).surround(range, surround)
+    }
 
-        cond(
-            move |t| range.contains(&t),
-            self.map_time(move |t| (t - time_shift) * time_scale),
-            default,
-        )
+    /// Play two animations in sequence, first playing `self` until time
+    /// `self_end` (non-inclusive), and then switching to `next`. The animations
+    /// are squeezed in time so that they fit into `[0 .. 1]` together.
+    ///
+    /// `self` is played in time `[0 .. self_end)`, and then `next` is played
+    /// in time [self_end .. 1]`.
+    pub fn seq_squeeze<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
+    where
+        G: Fun<T = F::T, V = F::V>,
+        A: Into<Anim<G>>,
+    {
+        let first = self.squeeze(Zero::zero()..=self_end);
+        let second = next.into().squeeze(self_end..=One::one());
+
+        first.switch(self_end, second)
     }
 }
 
