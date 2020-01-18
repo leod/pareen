@@ -72,6 +72,18 @@ pub trait Fun {
     fn eval(&self, t: Self::T) -> Self::V;
 }
 
+impl<'a, F> Fun for &'a F
+where
+    F: Fun,
+{
+    type T = F::T;
+    type V = F::V;
+
+    fn eval(&self, t: Self::T) -> Self::V {
+        (*self).eval(t)
+    }
+}
+
 /// `Anim` is the main type provided by pareen. It is a wrapper around any type
 /// implementing [`Fun`](trait.Fun.html).
 ///
@@ -116,6 +128,11 @@ where
     /// ```
     pub fn map_time<S>(self, f: impl Fn(S) -> F::T) -> Anim<impl Fun<T = S, V = F::V>> {
         self.map_time_anim(fun(f))
+    }
+
+    /// Converts from `Anim<F>` to `Anim<&F>`.
+    pub fn as_ref(&self) -> Anim<&F> {
+        Self(&self.0)
     }
 
     pub fn map_anim<W, G, A>(self, anim: A) -> Anim<impl Fun<T = F::T, V = W>>
