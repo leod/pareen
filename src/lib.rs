@@ -37,7 +37,7 @@
 //! ```
 
 use std::marker::PhantomData;
-use std::ops::{Add, Mul, Neg, RangeInclusive, Sub};
+use std::ops::{Add, Deref, Mul, Neg, RangeInclusive, Sub};
 
 use num_traits::{Float, FloatConst, Num, One, Zero};
 
@@ -81,6 +81,15 @@ where
 
     fn eval(&self, t: Self::T) -> Self::V {
         (*self).eval(t)
+    }
+}
+
+impl<'a, T, V> Fun for Box<dyn Fun<T = T, V = V>> {
+    type T = T;
+    type V = V;
+
+    fn eval(&self, t: Self::T) -> Self::V {
+        self.deref().eval(t)
     }
 }
 
@@ -151,6 +160,17 @@ where
     {
         let anim = anim.into();
         fun(move |t| self.eval(anim.eval(t)))
+    }
+}
+
+pub type AnimBox<T, V> = Anim<Box<dyn Fun<T = T, V = V>>>;
+
+impl<F> Anim<F>
+where
+    F: Fun + 'static,
+{
+    pub fn into_box(self) -> Anim<Box<dyn Fun<T = F::T, V = F::V>>> {
+        Anim(Box::new(self.0))
     }
 }
 
