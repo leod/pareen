@@ -318,6 +318,22 @@ where
     }
 }
 
+// TODO: We need to get rid of the 'static requirements.
+impl<F> Anim<F>
+where
+    F: Fun + 'static,
+    F::T: Copy + PartialOrd + Sub<Output = F::T> + 'static,
+    F::V: 'static,
+{
+    pub fn seq_box<G, A>(self, self_end: F::T, next: A) -> AnimBox<F::T, F::V>
+    where
+        G: Fun<T = F::T, V = F::V> + 'static,
+        A: Into<Anim<G>>,
+    {
+        self.into_box().seq(self_end, next.into().into_box()).into_box()
+    }
+}
+
 impl<F> Anim<F>
 where
     F: Fun,
