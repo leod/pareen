@@ -276,6 +276,21 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
+    F::T: Copy + PartialOrd,
+    F::V: Copy,
+{
+    /// Play `self` until time `self_end`, then always return the value of
+    /// `self` at time `self_end`.
+    pub fn hold(self, self_end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        let end_value = self.eval(self_end);
+
+        self.switch(self_end, constant(end_value))
+    }
+}
+
+impl<F> Anim<F>
+where
+    F: Fun,
     F::T: Copy + PartialOrd + Sub<Output = F::T>,
 {
     /// Play two animations in sequence, first playing `self` until time
