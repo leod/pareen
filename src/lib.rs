@@ -316,6 +316,17 @@ where
     {
         self.switch(self_end, next.into().shift_time(self_end))
     }
+
+    pub fn seq_continue<G, A, H>(self, self_end: F::T, next_fn: H) -> Anim<impl Fun<T = F::T, V = F::V>>
+    where
+        G: Fun<T = F::T, V = F::V>,
+        A: Into<Anim<G>>,
+        H: Fn(F::V) -> A,
+    {
+        let next = next_fn(self.eval(self_end)).into();
+
+        self.seq(self_end, next)
+    }
 }
 
 // TODO: We need to get rid of the 'static requirements.
