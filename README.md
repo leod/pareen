@@ -22,6 +22,12 @@ Just add this line to your dependencies in `Cargo.toml`:
 pareen = "0.1"
 ```
 
+## Current Status
+The core of `pareen` is mostly stable, but the integration of easing functions could use some love. Contributions are very much welcome!
+
+`pareen` is currently being tested in development of the game project [Ultimate Scale](https://github.com/leod/ultimate-scale).
+Unfortunately, it looks like heavily nested animations can cause an exponential slowdown in compilation time. For now, boxing intermediate animations serves as a workaround, but this comes with a decrease of both readability and efficiency.
+
 ## Examples
 ```rust
 // An animation returning a constant value
