@@ -132,7 +132,7 @@ where
 
     /// Converts from `Anim<F>` to `Anim<&F>`.
     pub fn as_ref(&self) -> Anim<&F> {
-        Self(&self.0)
+        Anim(&self.0)
     }
 
     pub fn map_anim<W, G, A>(self, anim: A) -> Anim<impl Fun<T = F::T, V = W>>
