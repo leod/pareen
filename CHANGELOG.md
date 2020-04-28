@@ -1,5 +1,5 @@
 # Changelog
-## Version 0.2.2 (2020-04-28)
+## Version 0.2.3 (2020-04-28)
 - Fix compilation issue on rustc 1.43.0 (https://github.com/leod/pareen/pull/7)
 
 ## Version 0.2.1 (2020-01-18)
