@@ -1,4 +1,7 @@
 # Changelog
+## Version 0.2.4
+- Add `Anim::repeat`
+
 ## Version 0.2.3 (2020-04-28)
 - Fix compilation issue on rustc 1.43.0 (https://github.com/leod/pareen/pull/7)
 

@@ -444,6 +444,11 @@ where
 
         first.switch(self_end, second)
     }
+
+    /// Repeat an animation forever.
+    pub fn repeat(self, period: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        self.map_time(move |t: F::T| (t * period.recip()).fract() * period)
+    }
 }
 
 impl<W, F> Anim<F>
