@@ -141,7 +141,7 @@ where
 
     /// Converts from `Anim<F>` to `Anim<&F>`.
     pub fn as_ref(&self) -> Anim<&F> {
-        Self(&self.0)
+        Anim(&self.0)
     }
 
     pub fn map_anim<W, G, A>(self, anim: A) -> Anim<impl Fun<T = F::T, V = W>>
@@ -505,6 +505,11 @@ where
         let second = next.into().squeeze(self_end..=One::one());
 
         first.switch(self_end, second)
+    }
+
+    /// Repeat an animation forever.
+    pub fn repeat(self, period: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        self.map_time(move |t: F::T| (t * period.recip()).fract() * period)
     }
 }
 
