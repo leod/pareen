@@ -1,4 +1,14 @@
 # Changelog
+## Version 0.2.4
+- Add `Anim::repeat`
+- Expose `easer` library
+
+## Version 0.2.3 (2020-04-28)
+- Fix compilation issue on rustc 1.43.0 (https://github.com/leod/pareen/pull/7)
+
+## Version 0.2.1 (2020-01-18)
+- Implement `Anim::as_ref`
+
 ## Version 0.2.0 (2020-01-13)
 - `squeeze` no longer switches to a default value outside of the given range.
  Use `squeeze_and_surround` as a replacement.
