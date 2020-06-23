@@ -75,6 +75,18 @@ pub trait Fun {
     fn eval(&self, t: Self::T) -> Self::V;
 }
 
+impl<'a, F> Fun for &'a F
+where
+    F: Fun,
+{
+    type T = F::T;
+    type V = F::V;
+
+    fn eval(&self, t: Self::T) -> Self::V {
+        (*self).eval(t)
+    }
+}
+
 /// `Anim` is the main type provided by pareen. It is a wrapper around any type
 /// implementing [`Fun`](trait.Fun.html).
 ///
@@ -119,6 +131,11 @@ where
     /// ```
     pub fn map_time<S>(self, f: impl Fn(S) -> F::T) -> Anim<impl Fun<T = S, V = F::V>> {
         self.map_time_anim(fun(f))
+    }
+
+    /// Converts from `Anim<F>` to `Anim<&F>`.
+    pub fn as_ref(&self) -> Anim<&F> {
+        Anim(&self.0)
     }
 
     pub fn map_anim<W, G, A>(self, anim: A) -> Anim<impl Fun<T = F::T, V = W>>
@@ -415,9 +432,11 @@ where
     }
 
     /// Play two animations in sequence, first playing `self` until time
-    /// `self_end` (non-inclusive), and then switching to `next`. Both animations are
-    /// squeezed in time so that their time `[0 .. 1]` is shifted and scaled into the
-    /// ranges `[0 .. self_end]` and `[self_end .. 1]`.
+    /// `self_end` (non-inclusive), and then switching to `next`. The animations
+    /// are squeezed in time so that they fit into `[0 .. 1]` together.
+    ///
+    /// `self` is played in time `[0 .. self_end)`, and then `next` is played
+    /// in time [self_end .. 1]`.
     pub fn seq_squeeze<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
@@ -427,6 +446,11 @@ where
         let second = next.into().squeeze(self_end..=One::one());
 
         first.switch(self_end, second)
+    }
+
+    /// Repeat an animation forever.
+    pub fn repeat(self, period: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        self.map_time(move |t: F::T| (t * period.recip()).fract() * period)
     }
 }
 
