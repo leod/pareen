@@ -23,10 +23,12 @@ pareen = "0.2"
 ```
 
 ## Current Status
-The core of `pareen` is mostly stable, but the integration of easing functions could use some love. Contributions are very much welcome!
+I consider `pareen` to be an experimental approach, and I'm not sure if I'm still happy with it.
+Anyway, the integration of easing functions could use some love. Contributions are very much welcome!
 
-`pareen` is currently being tested in development of the game project [Ultimate Scale](https://github.com/leod/ultimate-scale).
-Unfortunately, it looks like heavily nested animations can cause an exponential slowdown in compilation time. For now, boxing intermediate animations serves as a workaround, but this comes with a decrease of both readability and efficiency.
+Unfortunately, it looks like heavily nested animations can cause an exponential slowdown in compilation time.
+For now, boxing intermediate animations serves as a workaround, but this comes with a decrease of both
+readability and efficiency.
 
 ## Examples
 ```rust
