@@ -1,6 +1,7 @@
 # Changelog
 ## Version 0.2.4
-- Add `Anim::repeat`
+- Add `Anim::repeat`, `Anim::hold` and `Anim::seq_continue`
+- Allow boxed animations
 - Expose `easer` library
 
 ## Version 0.2.3 (2020-04-28)

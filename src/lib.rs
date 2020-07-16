@@ -172,6 +172,10 @@ impl<F> Anim<F>
 where
     F: Fun + 'static,
 {
+    /// Returns a boxed version of this animation.
+    ///
+    /// This may be used to reduce the compilation time of deeply nested
+    /// animations.
     pub fn into_box(self) -> Anim<Box<dyn Fun<T = F::T, V = F::V>>> {
         Anim(Box::new(self.0))
     }
@@ -320,7 +324,11 @@ where
         self.switch(self_end, next.into().shift_time(self_end))
     }
 
-    pub fn seq_continue<G, A, H>(self, self_end: F::T, next_fn: H) -> Anim<impl Fun<T = F::T, V = F::V>>
+    pub fn seq_continue<G, A, H>(
+        self,
+        self_end: F::T,
+        next_fn: H,
+    ) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
         A: Into<Anim<G>>,
@@ -344,7 +352,9 @@ where
         G: Fun<T = F::T, V = F::V> + 'static,
         A: Into<Anim<G>>,
     {
-        self.into_box().seq(self_end, next.into().into_box()).into_box()
+        self.into_box()
+            .seq(self_end, next.into().into_box())
+            .into_box()
     }
 }
 
