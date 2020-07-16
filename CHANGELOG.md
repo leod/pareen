@@ -1,5 +1,5 @@
 # Changelog
-## Version 0.2.4
+## Version 0.2.4 (2020-07-16)
 - Add `Anim::repeat`
 - Expose `easer` library
 
