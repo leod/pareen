@@ -44,6 +44,9 @@ use num_traits::{Float, FloatConst, Num, One, Zero};
 #[cfg(feature = "easer")]
 use easer::functions::Easing;
 
+#[cfg(feature = "easer")]
+pub use easer;
+
 /// A `Fun` represents anything that maps from some type `T` to another
 /// type `V`.
 ///
