@@ -37,7 +37,7 @@
 //! ```
 
 use std::marker::PhantomData;
-use std::ops::{Add, Mul, Neg, RangeInclusive, Sub};
+use std::ops::{Add, Deref, Mul, Neg, RangeInclusive, Sub};
 
 use num_traits::{Float, FloatConst, Num, One, Zero};
 
@@ -84,6 +84,15 @@ where
 
     fn eval(&self, t: Self::T) -> Self::V {
         (*self).eval(t)
+    }
+}
+
+impl<'a, T, V> Fun for Box<dyn Fun<T = T, V = V>> {
+    type T = T;
+    type V = V;
+
+    fn eval(&self, t: Self::T) -> Self::V {
+        self.deref().eval(t)
     }
 }
 
@@ -154,6 +163,21 @@ where
     {
         let anim = anim.into();
         fun(move |t| self.eval(anim.eval(t)))
+    }
+}
+
+pub type AnimBox<T, V> = Anim<Box<dyn Fun<T = T, V = V>>>;
+
+impl<F> Anim<F>
+where
+    F: Fun + 'static,
+{
+    /// Returns a boxed version of this animation.
+    ///
+    /// This may be used to reduce the compilation time of deeply nested
+    /// animations.
+    pub fn into_box(self) -> Anim<Box<dyn Fun<T = F::T, V = F::V>>> {
+        Anim(Box::new(self.0))
     }
 }
 
@@ -259,6 +283,21 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
+    F::T: Copy + PartialOrd,
+    F::V: Copy,
+{
+    /// Play `self` until time `self_end`, then always return the value of
+    /// `self` at time `self_end`.
+    pub fn hold(self, self_end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        let end_value = self.eval(self_end);
+
+        self.switch(self_end, constant(end_value))
+    }
+}
+
+impl<F> Anim<F>
+where
+    F: Fun,
     F::T: Copy + PartialOrd + Sub<Output = F::T>,
 {
     /// Play two animations in sequence, first playing `self` until time
@@ -283,6 +322,39 @@ where
         A: Into<Anim<G>>,
     {
         self.switch(self_end, next.into().shift_time(self_end))
+    }
+
+    pub fn seq_continue<G, A, H>(
+        self,
+        self_end: F::T,
+        next_fn: H,
+    ) -> Anim<impl Fun<T = F::T, V = F::V>>
+    where
+        G: Fun<T = F::T, V = F::V>,
+        A: Into<Anim<G>>,
+        H: Fn(F::V) -> A,
+    {
+        let next = next_fn(self.eval(self_end)).into();
+
+        self.seq(self_end, next)
+    }
+}
+
+// TODO: We need to get rid of the 'static requirements.
+impl<F> Anim<F>
+where
+    F: Fun + 'static,
+    F::T: Copy + PartialOrd + Sub<Output = F::T> + 'static,
+    F::V: 'static,
+{
+    pub fn seq_box<G, A>(self, self_end: F::T, next: A) -> AnimBox<F::T, F::V>
+    where
+        G: Fun<T = F::T, V = F::V> + 'static,
+        A: Into<Anim<G>>,
+    {
+        self.into_box()
+            .seq(self_end, next.into().into_box())
+            .into_box()
     }
 }
 
