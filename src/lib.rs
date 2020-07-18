@@ -15,7 +15,7 @@
 //! ```rust
 //! # use assert_approx_eq::assert_approx_eq;
 //! // An animation returning a constant value
-//! let anim1 = pareen::constant(1.0f64);
+//! let anim1 = pareen::c(1.0f64);
 //!
 //! // Animations can be evaluated at any time
 //! let value = anim1.eval(0.5);
@@ -104,10 +104,17 @@ impl<'a, T, V> Fun for Box<dyn Fun<T = T, V = V>> {
 #[derive(Clone, Debug)]
 pub struct Anim<F>(pub F);
 
+#[derive(Clone, Debug)]
+pub struct AnimWithDur<F: Fun>(pub Anim<F>, pub F::T);
+
 impl<F> Anim<F>
 where
     F: Fun,
 {
+    pub fn dur(self, t: F::T) -> AnimWithDur<F> {
+        AnimWithDur(self, t)
+    }
+
     /// Evaluate the animation at time `t`.
     pub fn eval(&self, t: F::T) -> F::V {
         self.0.eval(t)
@@ -166,6 +173,46 @@ where
     }
 }
 
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+    F::T: Copy + PartialOrd + Sub<Output = F::T>,
+{
+    pub fn seq<G, A>(self, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
+    where
+        G: Fun<T = F::T, V = F::V>,
+        A: Into<Anim<G>>,
+    {
+        self.0.seq(self.1, next.into())
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+    F::T: Copy + PartialOrd + Sub<Output = F::T> + Add<Output = F::T>,
+{
+    pub fn seq_with_dur<G, A>(self, next: A) -> AnimWithDur<impl Fun<T = F::T, V = F::V>>
+    where
+        G: Fun<T = F::T, V = F::V>,
+        A: Into<AnimWithDur<G>>,
+    {
+        let next = next.into();
+        let dur = self.1 + next.1;
+        AnimWithDur(self.seq(next.0), dur)
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+    F::T: Copy + Float,
+{
+    pub fn repeat(self) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        self.0.repeat(self.1)
+    }
+}
+
 pub type AnimBox<T, V> = Anim<Box<dyn Fun<T = T, V = V>>>;
 
 impl<F> Anim<F>
@@ -220,6 +267,16 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
+    F::T: Copy + Mul<Output = F::T>,
+{
+    pub fn scale_time(self, t_scale: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        self.map_time(move |t| t * t_scale)
+    }
+}
+
+impl<F> Anim<F>
+where
+    F: Fun,
     F::T: Copy + PartialOrd,
 {
     /// Concatenate `self` with another animation in time, using `self` until
@@ -229,7 +286,7 @@ where
     /// Switch from one constant value to another:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim = pareen::constant(1.0f32).switch(0.5f32, 2.0);
+    /// let anim = pareen::c(1.0f32).switch(0.5f32, 2.0);
     ///
     /// assert_approx_eq!(anim.eval(0.0), 1.0);
     /// assert_approx_eq!(anim.eval(0.5), 2.0);
@@ -259,7 +316,7 @@ where
     /// # Examples
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim = pareen::constant(10.0f32).surround(2.0..=5.0, 20.0);
+    /// let anim = pareen::c(10.0f32).surround(2.0..=5.0, 20.0);
     ///
     /// assert_approx_eq!(anim.eval(0.0), 20.0);
     /// assert_approx_eq!(anim.eval(2.0), 10.0);
@@ -291,7 +348,7 @@ where
     pub fn hold(self, self_end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
         let end_value = self.eval(self_end);
 
-        self.switch(self_end, constant(end_value))
+        self.switch(self_end, c(end_value))
     }
 }
 
@@ -308,7 +365,7 @@ where
     /// Stay at value `5.0` for ten seconds, then increase value proportionally:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim_1 = pareen::constant(5.0f32);
+    /// let anim_1 = pareen::c(5.0f32);
     /// let anim_2 = pareen::prop(2.0f32) + 5.0;
     /// let anim = anim_1.seq(10.0, anim_2);
     ///
@@ -466,6 +523,10 @@ where
         self.map_time(move |t| (t - time_shift) * time_scale)
     }
 
+    pub fn scale_to_dur(self, dur: F::T) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
+        self.scale_time(F::T::one() / dur).dur(dur)
+    }
+
     /// Transform an animation in time, so that its time `[0 .. 1]` is shifted
     /// and scaled into the given `range`.
     ///
@@ -540,7 +601,7 @@ where
     /// Linearly interpolate between two constant values:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim = pareen::constant(5.0f32).lerp(10.0);
+    /// let anim = pareen::c(5.0f32).lerp(10.0);
     ///
     /// assert_approx_eq!(anim.eval(0.0f32), 5.0);
     /// assert_approx_eq!(anim.eval(0.5), 7.5);
@@ -710,7 +771,7 @@ where
     /// Play a constant value until time `0.5`, then transition for `0.3`
     /// time units, using a cubic function, into a second animation:
     /// ```
-    /// let first_anim = pareen::constant(2.0);
+    /// let first_anim = pareen::c(2.0);
     /// let second_anim = pareen::prop(1.0f32);
     /// let anim = first_anim.seq_ease_in_out(
     ///     0.5,
@@ -751,7 +812,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// let anim1 = pareen::constant(Some(42)).unwrap_or(-1);
+    /// let anim1 = pareen::c(Some(42)).unwrap_or(-1);
     /// assert_eq!(anim1.eval(2), 42);
     /// assert_eq!(anim1.eval(3), 42);
     /// ```
@@ -786,7 +847,7 @@ where
     /// ) -> pareen::Anim<impl pareen::Fun<T = f32, V = f32>> {
     ///     let move_speed = 2.0f32;
     ///
-    ///     pareen::constant(move_dir).map_or(
+    ///     pareen::c(move_dir).map_or(
     ///         0.0,
     ///         move |move_dir| pareen::prop(move_dir) * move_speed,
     ///     )
@@ -842,13 +903,13 @@ pub fn fun<T, V>(f: impl Fn(T) -> V) -> Anim<impl Fun<T = T, V = V>> {
 /// # Example
 /// ```
 /// # use assert_approx_eq::assert_approx_eq;
-/// let anim = pareen::constant(1.0f32);
+/// let anim = pareen::c(1.0f32);
 ///
 /// assert_approx_eq!(anim.eval(-10000.0f32), 1.0);
 /// assert_approx_eq!(anim.eval(0.0), 1.0);
 /// assert_approx_eq!(anim.eval(42.0), 1.0);
 /// ```
-pub fn constant<T, V: Copy>(c: V) -> Anim<impl Fun<T = T, V = V>> {
+pub fn c<T, V: Copy>(c: V) -> Anim<impl Fun<T = T, V = V>> {
     fun(move |_| c)
 }
 
@@ -942,7 +1003,7 @@ where
 /// different types:
 /// ```compile_fail
 /// let cond = true;
-/// let anim = if cond { pareen::constant(1) } else { pareen::id() };
+/// let anim = if cond { pareen::c(1) } else { pareen::id() };
 /// ```
 ///
 /// However, this does compile:
@@ -1043,7 +1104,7 @@ where
 ///
 /// fn my_anim(state: MyPlayerState) -> pareen::Anim<impl pareen::Fun<T = f64, V = f64>> {
 ///     pareen::anim_match!(state;
-///         MyPlayerState::Standing => pareen::constant(0.0),
+///         MyPlayerState::Standing => pareen::c(0.0),
 ///         MyPlayerState::Running => pareen::prop(1.0),
 ///         MyPlayerState::Jumping => pareen::id().powi(2),
 ///     )
@@ -1064,6 +1125,22 @@ macro_rules! anim_match {
                 $pat => ($crate::Anim::from($value)).eval(t),
             )*
         })
+    }
+}
+
+#[macro_export]
+macro_rules! seq_with_dur {
+    (
+        $expr:expr $(,)?
+    ) => {
+        $expr
+    };
+
+    (
+        $head:expr,
+        $($tail:expr $(,)?)+
+    ) => {
+        $head.seq_with_dur($crate::seq_with_dur!($($tail,)*))
     }
 }
 
