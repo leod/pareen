@@ -4,7 +4,10 @@ fn main() {
     let mut plots = Plots { plots: Vec::new() };
 
     plots.add("id", pareen::id());
-    plots.add("lerp between 2 and 4", pareen::lerp(pareen::c(2.0), pareen::c(4.0)));
+    plots.add(
+        "lerp between 2 and 4",
+        pareen::lerp(pareen::c(2.0), pareen::c(4.0)),
+    );
     plots.add(
         "dynamic lerp between sin^2 and cos",
         pareen::circle().sin().powi(2).lerp(pareen::circle().cos()),
