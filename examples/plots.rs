@@ -19,18 +19,13 @@ fn main() {
     );
     plots.add(
         "switch from 1 to 2 at time=0.5",
-        pareen::constant(1.0).switch(0.5, 2.0),
+        pareen::c(1.0).switch(0.5, 2.0),
     );
 
     #[cfg(feature = "easer")]
     plots.add(
         "ease transition from 2 to a proportional anim",
-        pareen::constant(2.0).seq_ease_in_out(
-            0.5,
-            easer::functions::Cubic,
-            0.3,
-            pareen::prop(1.0f32),
-        ),
+        pareen::c(2.0).seq_ease_in_out(0.5, easer::functions::Cubic, 0.3, pareen::prop(1.0f32)),
     );
 
     plots.show_gnuplot();
