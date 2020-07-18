@@ -154,21 +154,17 @@ where
         Anim(&self.0)
     }
 
-    pub fn map_anim<W, G, A>(self, anim: A) -> Anim<impl Fun<T = F::T, V = W>>
+    pub fn map_anim<W, G>(self, anim: Anim<G>) -> Anim<impl Fun<T = F::T, V = W>>
     where
         G: Fun<T = F::V, V = W>,
-        A: Into<Anim<G>>,
     {
-        let anim = anim.into();
         fun(move |t| anim.eval(self.eval(t)))
     }
 
-    pub fn map_time_anim<S, G, A>(self, anim: A) -> Anim<impl Fun<T = S, V = F::V>>
+    pub fn map_time_anim<S, G>(self, anim: Anim<G>) -> Anim<impl Fun<T = S, V = F::V>>
     where
         G: Fun<T = S, V = F::T>,
-        A: Into<Anim<G>>,
     {
-        let anim = anim.into();
         fun(move |t| self.eval(anim.eval(t)))
     }
 }
@@ -178,12 +174,11 @@ where
     F: Fun,
     F::T: Copy + PartialOrd + Sub<Output = F::T>,
 {
-    pub fn seq<G, A>(self, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
+    pub fn seq<G>(self, next: Anim<G>) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
-        A: Into<Anim<G>>,
     {
-        self.0.seq(self.1, next.into())
+        self.0.seq(self.1, next)
     }
 }
 
@@ -192,12 +187,10 @@ where
     F: Fun,
     F::T: Copy + PartialOrd + Sub<Output = F::T> + Add<Output = F::T>,
 {
-    pub fn seq_with_dur<G, A>(self, next: A) -> AnimWithDur<impl Fun<T = F::T, V = F::V>>
+    pub fn seq_with_dur<G>(self, next: AnimWithDur<G>) -> AnimWithDur<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
-        A: Into<AnimWithDur<G>>,
     {
-        let next = next.into();
         let dur = self.1 + next.1;
         AnimWithDur(self.seq(next.0), dur)
     }
@@ -235,13 +228,10 @@ where
 {
     /// Combine two animations into one, yielding an animation having pairs as
     /// the values.
-    pub fn zip<W, G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = (F::V, W)>>
+    pub fn zip<W, G>(self, other: Anim<G>) -> Anim<impl Fun<T = F::T, V = (F::V, W)>>
     where
         G: Fun<T = F::T, V = W>,
-        A: Into<Anim<G>>,
     {
-        let other = other.into();
-
         fun(move |t| (self.eval(t), other.eval(t)))
     }
 
@@ -303,10 +293,9 @@ where
     /// // cubic_3 for [0.8, ..).
     /// let anim = cubic_1.switch(0.4, cubic_2).switch(0.8, cubic_3);
     /// ```
-    pub fn switch<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
+    pub fn switch<G>(self, self_end: F::T, next: Anim<G>) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
-        A: Into<Anim<G>>,
     {
         cond(fun(move |t| t < self_end), self, next)
     }
@@ -324,16 +313,15 @@ where
     /// assert_approx_eq!(anim.eval(5.0), 10.0);
     /// assert_approx_eq!(anim.eval(6.0), 20.0);
     /// ```
-    pub fn surround<G, A>(
+    pub fn surround<G>(
         self,
         range: RangeInclusive<F::T>,
-        surround: A,
+        surround: Anim<G>,
     ) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
-        A: Into<Anim<G>>,
     {
-        cond(move |t| range.contains(&t), self, surround)
+        cond(fun(move |t| range.contains(&t)), self, surround)
     }
 }
 
@@ -373,25 +361,23 @@ where
     /// assert_approx_eq!(anim.eval(10.0), 5.0);
     /// assert_approx_eq!(anim.eval(11.0), 7.0);
     /// ```
-    pub fn seq<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
+    pub fn seq<G>(self, self_end: F::T, next: Anim<G>) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
-        A: Into<Anim<G>>,
     {
-        self.switch(self_end, next.into().shift_time(self_end))
+        self.switch(self_end, next.shift_time(self_end))
     }
 
-    pub fn seq_continue<G, A, H>(
+    pub fn seq_continue<G, H>(
         self,
         self_end: F::T,
         next_fn: H,
     ) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
-        A: Into<Anim<G>>,
-        H: Fn(F::V) -> A,
+        H: Fn(F::V) -> Anim<G>,
     {
-        let next = next_fn(self.eval(self_end)).into();
+        let next = next_fn(self.eval(self_end));
 
         self.seq(self_end, next)
     }
@@ -404,13 +390,12 @@ where
     F::T: Copy + PartialOrd + Sub<Output = F::T> + 'static,
     F::V: 'static,
 {
-    pub fn seq_box<G, A>(self, self_end: F::T, next: A) -> AnimBox<F::T, F::V>
+    pub fn seq_box<G>(self, self_end: F::T, next: Anim<G>) -> AnimBox<F::T, F::V>
     where
         G: Fun<T = F::T, V = F::V> + 'static,
-        A: Into<Anim<G>>,
     {
         self.into_box()
-            .seq(self_end, next.into().into_box())
+            .seq(self_end, next.into_box())
             .into_box()
     }
 }
@@ -552,14 +537,13 @@ where
     /// assert_approx_eq!(anim.eval(1.0), std::f32::consts::PI * 2.0);
     /// assert_approx_eq!(anim.eval(1.1), 42.0);
     /// ```
-    pub fn squeeze_and_surround<G, A>(
+    pub fn squeeze_and_surround<G>(
         self,
         range: RangeInclusive<F::T>,
-        surround: A,
+        surround: Anim<G>,
     ) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
-        A: Into<Anim<G>>,
     {
         self.squeeze(range.clone()).surround(range, surround)
     }
@@ -570,13 +554,12 @@ where
     ///
     /// `self` is played in time `[0 .. self_end)`, and then `next` is played
     /// in time [self_end .. 1]`.
-    pub fn seq_squeeze<G, A>(self, self_end: F::T, next: A) -> Anim<impl Fun<T = F::T, V = F::V>>
+    pub fn seq_squeeze<G>(self, self_end: F::T, next: Anim<G>) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
-        A: Into<Anim<G>>,
     {
         let first = self.squeeze(Zero::zero()..=self_end);
-        let second = next.into().squeeze(self_end..=One::one());
+        let second = next.squeeze(self_end..=One::one());
 
         first.switch(self_end, second)
     }
@@ -615,13 +598,10 @@ where
     /// let anim = pareen::circle().sin().lerp(pareen::circle().cos());
     /// let value: f32 = anim.eval(0.5f32);
     /// ```
-    pub fn lerp<G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = F::V>>
+    pub fn lerp<G>(self, other: Anim<G>) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
-        A: Into<Anim<G>>,
     {
-        let other = other.into();
-
         fun(move |t| {
             let a = self.eval(t);
             let b = other.eval(t);
@@ -639,20 +619,17 @@ where
     V: Float,
     F: Fun<T = V, V = V>,
 {
-    fn seq_ease<G, H, A>(
+    fn seq_ease<G, H>(
         self,
         self_end: V,
         ease: impl Fn(V, V, V) -> Anim<G>,
         ease_duration: V,
-        next: A,
+        next: Anim<H>,
     ) -> Anim<impl Fun<T = V, V = V>>
     where
         G: Fun<T = V, V = V>,
         H: Fun<T = V, V = V>,
-        A: Into<Anim<H>>,
     {
-        let next = next.into();
-
         let ease_start_value = self.eval(self_end);
         let ease_end_value = next.eval(V::zero());
         let ease_delta = ease_end_value - ease_start_value;
@@ -687,17 +664,16 @@ where
     /// # Example
     ///
     /// See [`seq_ease_in_out`](struct.Anim.html#method.seq_ease_in_out) for an example.
-    pub fn seq_ease_in<E, G, A>(
+    pub fn seq_ease_in<E, G>(
         self,
         self_end: V,
         _easing: E,
         ease_duration: V,
-        next: A,
+        next: Anim<G>,
     ) -> Anim<impl Fun<T = V, V = V>>
     where
         E: Easing<V>,
         G: Fun<T = V, V = V>,
-        A: Into<Anim<G>>,
     {
         self.seq_ease(self_end, ease_in::<E, V>, ease_duration, next)
     }
@@ -728,17 +704,16 @@ where
     /// # Example
     ///
     /// See [`seq_ease_in_out`](struct.Anim.html#method.seq_ease_in_out) for an example.
-    pub fn seq_ease_out<E, G, A>(
+    pub fn seq_ease_out<E, G>(
         self,
         self_end: V,
         _: E,
         ease_duration: V,
-        next: A,
+        next: Anim<G>,
     ) -> Anim<impl Fun<T = V, V = V>>
     where
         E: Easing<V>,
         G: Fun<T = V, V = V>,
-        A: Into<Anim<G>>,
     {
         self.seq_ease(self_end, ease_out::<E, V>, ease_duration, next)
     }
@@ -783,17 +758,16 @@ where
     /// The animation will look like this:
     ///
     /// ![plot for seq_ease_in_out](https://raw.githubusercontent.com/leod/pareen/master/images/seq_ease_in_out.png)
-    pub fn seq_ease_in_out<E, G, A>(
+    pub fn seq_ease_in_out<E, G>(
         self,
         self_end: V,
         _: E,
         ease_duration: V,
-        next: A,
+        next: Anim<G>,
     ) -> Anim<impl Fun<T = V, V = V>>
     where
         E: Easing<V>,
         G: Fun<T = V, V = V>,
-        A: Into<Anim<G>>,
     {
         self.seq_ease(self_end, ease_in_out::<E, V>, ease_duration, next)
     }
@@ -823,12 +797,11 @@ where
     /// assert_eq!(anim1.eval(2), 42);
     /// assert_eq!(anim1.eval(3), -1);
     /// ```
-    pub fn unwrap_or<G, A>(self, default: A) -> Anim<impl Fun<T = F::T, V = V>>
+    pub fn unwrap_or<G>(self, default: Anim<G>) -> Anim<impl Fun<T = F::T, V = V>>
     where
         G: Fun<T = F::T, V = V>,
-        A: Into<Anim<G>>,
     {
-        self.zip(default.into())
+        self.zip(default)
             .map(|(v, default)| v.unwrap_or(default))
     }
 
@@ -859,18 +832,15 @@ where
     /// assert_approx_eq!(move_anim.eval(0.5), 1.0);
     /// assert_approx_eq!(stay_anim.eval(0.5), 0.0);
     /// ```
-    pub fn map_or<W, G, H, A>(
+    pub fn map_or<W, G, H>(
         self,
-        default: A,
+        default: Anim<G>,
         f: impl Fn(V) -> Anim<H>,
     ) -> Anim<impl Fun<T = F::T, V = W>>
     where
         G: Fun<T = F::T, V = W>,
         H: Fun<T = F::T, V = W>,
-        A: Into<Anim<G>>,
     {
-        let default = default.into();
-
         //self.bind(move |v| v.map_or(default, f))
 
         fun(move |t| {
@@ -1026,20 +996,13 @@ where
 /// assert_eq!(anim.eval(2), 1); // 2 * 2 <= 4
 /// assert_eq!(anim.eval(3), 3); // 3 * 3 > 4
 /// ```
-pub fn cond<T, V, F, G, H, Cond, A, B>(cond: Cond, a: A, b: B) -> Anim<impl Fun<T = T, V = V>>
+pub fn cond<T, V, F, G, H>(cond: Anim<F>, a: Anim<G>, b: Anim<H>) -> Anim<impl Fun<T = T, V = V>>
 where
     T: Copy,
     F: Fun<T = T, V = bool>,
     G: Fun<T = T, V = V>,
     H: Fun<T = T, V = V>,
-    Cond: Into<Anim<F>>,
-    A: Into<Anim<G>>,
-    B: Into<Anim<H>>,
 {
-    let cond = cond.into();
-    let a = a.into();
-    let b = b.into();
-
     fun(move |t| if cond.eval(t) { a.eval(t) } else { b.eval(t) })
 }
 
@@ -1063,16 +1026,14 @@ where
 /// assert_approx_eq!(anim.eval(1.0), 10.0);
 /// assert_approx_eq!(anim.eval(2.0), 15.0);
 /// ```
-pub fn lerp<T, V, W, F, G, A, B>(a: A, b: B) -> Anim<impl Fun<T = T, V = V>>
+pub fn lerp<T, V, W, F, G>(a: Anim<F>, b: Anim<G>) -> Anim<impl Fun<T = T, V = V>>
 where
     T: Copy + Mul<W, Output = W>,
     V: Copy + Add<W, Output = V> + Sub<Output = W>,
     F: Fun<T = T, V = V>,
     G: Fun<T = T, V = V>,
-    A: Into<Anim<F>>,
-    B: Into<Anim<G>>,
 {
-    a.into().lerp(b.into())
+    a.lerp(b)
 }
 
 /// Evaluate a cubic polynomial in time.

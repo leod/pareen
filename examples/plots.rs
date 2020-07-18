@@ -4,7 +4,7 @@ fn main() {
     let mut plots = Plots { plots: Vec::new() };
 
     plots.add("id", pareen::id());
-    plots.add("lerp between 2 and 4", pareen::lerp(2.0, 4.0));
+    plots.add("lerp between 2 and 4", pareen::lerp(pareen::c(2.0), pareen::c(4.0)));
     plots.add(
         "dynamic lerp between sin^2 and cos",
         pareen::circle().sin().powi(2).lerp(pareen::circle().cos()),
@@ -15,11 +15,11 @@ fn main() {
             .sin()
             .powi(2)
             .lerp(pareen::circle().cos())
-            .squeeze_and_surround(0.5..=1.0, 0.0),
+            .squeeze_and_surround(0.5..=1.0, pareen::c(0.0)),
     );
     plots.add(
         "switch from 1 to 2 at time=0.5",
-        pareen::c(1.0).switch(0.5, 2.0),
+        pareen::c(1.0).switch(0.5, pareen::c(2.0)),
     );
 
     #[cfg(feature = "easer")]
