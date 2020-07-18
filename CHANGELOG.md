@@ -1,7 +1,11 @@
 # Changelog
-## Version 0.2.4 (2020-07-16)
-- Add `Anim::repeat`
+## Version 0.2.5
+- Add `Anim::repeat`, `Anim::hold` and `Anim::seq_continue`
+- Allow boxed animations
 - Expose `easer` library
+
+## Version 0.2.4 (2020-07-16)
+Yanked.
 
 ## Version 0.2.3 (2020-04-28)
 - Fix compilation issue on rustc 1.43.0 (https://github.com/leod/pareen/pull/7)
