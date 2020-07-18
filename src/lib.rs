@@ -394,9 +394,7 @@ where
     where
         G: Fun<T = F::T, V = F::V> + 'static,
     {
-        self.into_box()
-            .seq(self_end, next.into_box())
-            .into_box()
+        self.into_box().seq(self_end, next.into_box()).into_box()
     }
 }
 
@@ -801,8 +799,7 @@ where
     where
         G: Fun<T = F::T, V = V>,
     {
-        self.zip(default)
-            .map(|(v, default)| v.unwrap_or(default))
+        self.zip(default).map(|(v, default)| v.unwrap_or(default))
     }
 
     /// Applies a function to the contained value (if any), or returns the
@@ -1046,6 +1043,15 @@ where
         let t3 = t2 * t;
 
         w[0] * t3 + w[1] * t2 + w[2] * t + w[3]
+    })
+}
+
+pub fn frames(range: RangeInclusive<usize>, fps: f32) -> Anim<impl Fun<T = f32, V = usize>> {
+    fun(move |t| {
+        let frame_time: f32 = t * fps;
+        let range_size = range.end() - range.start();
+
+        range.start() + frame_time.trunc() as usize % range_size
     })
 }
 
