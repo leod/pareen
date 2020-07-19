@@ -1080,7 +1080,7 @@ pub fn frames(range: RangeInclusive<usize>, fps: f32) -> Anim<impl Fun<T = f32, 
         let frame_time: f32 = t * fps;
         let range_size = range.end() - range.start();
 
-        range.start() + frame_time.trunc() as usize % range_size
+        range.start() + (frame_time.trunc() as isize % range_size as isize).abs()
     })
 }
 
