@@ -37,7 +37,7 @@
 //! ```
 
 use std::marker::PhantomData;
-use std::ops::{Add, Deref, Mul, Neg, RangeInclusive, Sub};
+use std::ops::{Add, Deref, Div, Mul, Neg, RangeInclusive, Sub};
 
 use num_traits::{Float, FloatConst, Num, One, Zero};
 
@@ -172,6 +172,15 @@ where
 impl<F> AnimWithDur<F>
 where
     F: Fun,
+{
+    pub fn dur(self, t: F::T) -> AnimWithDur<F> {
+        AnimWithDur(self.0, t)
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
     F::T: Copy + PartialOrd + Sub<Output = F::T>,
 {
     pub fn seq<G>(self, next: Anim<G>) -> Anim<impl Fun<T = F::T, V = F::V>>
@@ -213,6 +222,16 @@ where
 {
     pub fn backwards(self) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
         AnimWithDur(self.0.backwards(self.1), self.1)
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+    F::T: Copy + Mul<Output = F::T> + Div<Output = F::T>,
+{
+    pub fn scale_time(self, t_scale: F::T) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
+        AnimWithDur(self.0.scale_time(t_scale), self.1 / t_scale)
     }
 }
 
