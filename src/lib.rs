@@ -206,6 +206,16 @@ where
     }
 }
 
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+    F::T: Copy + Sub<Output = F::T>,
+{
+    pub fn backwards(self) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
+        AnimWithDur(self.0.backwards(self.1), self.1)
+    }
+}
+
 pub type AnimBox<T, V> = Anim<Box<dyn Fun<T = T, V = V>>>;
 
 impl<F> Anim<F>
