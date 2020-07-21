@@ -168,6 +168,7 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Debug, Clone)]
 pub struct MapClosure<F, G>(F, G);
 
 impl<F, G> Fun for MapClosure<F, G>
@@ -225,6 +226,7 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Debug, Clone)]
 pub struct ZipClosure<F, G>(F, G);
 
 impl<F, G> Fun for ZipClosure<F, G>
@@ -244,7 +246,7 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + Add<Output = F::T> + Neg<Output = F::T>,
+    F::T: Copy + Sub<Output = F::T>,
 {
     /// Shift an animation in time, so that it is moved to the right by `t_delay`.
     pub fn shift_time(self, t_delay: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
@@ -286,7 +288,10 @@ where
         G: Fun<T = F::T, V = F::V>,
         A: Into<Anim<G>>,
     {
-        cond(fun(move |t| t < self_end), self, next)
+        // Nested closures result in exponential compilation time increase, and we
+        // expect switch to be used frequently. Thus, we avoid using `pareen::fun` here.
+        // For reference: https://github.com/rust-lang/rust/issues/72408
+        cond(switch_cond(self_end), self, next)
     }
 
     /// Play `self` in time range `range`, and `surround` outside of the time range.
@@ -311,8 +316,19 @@ where
         G: Fun<T = F::T, V = F::V>,
         A: Into<Anim<G>>,
     {
-        cond(move |t| range.contains(&t), self, surround)
+        // Nested closures result in exponential compilation time increase, and we
+        // expect surround to be used frequently. Thus, we avoid using `pareen::fun` here.
+        // For reference: https://github.com/rust-lang/rust/issues/72408
+        cond(surround_cond(range), self, surround)
     }
+}
+
+fn switch_cond<T: PartialOrd>(self_end: T) -> Anim<impl Fun<T = T, V = bool>> {
+    fun(move |t| t < self_end)
+}
+
+fn surround_cond<T: PartialOrd>(range: RangeInclusive<T>) -> Anim<impl Fun<T = T, V = bool>> {
+    fun(move |t| range.contains(&t))
 }
 
 impl<F> Anim<F>
@@ -333,7 +349,7 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + PartialOrd + Neg<Output = F::T> + Add<Output = F::T>,
+    F::T: Copy + PartialOrd + Sub<Output = F::T>,
 {
     /// Play two animations in sequence, first playing `self` until time
     /// `self_end` (non-inclusive), and then switching to `next`. Note that
@@ -379,7 +395,7 @@ where
 impl<F> Anim<F>
 where
     F: Fun + 'static,
-    F::T: Copy + PartialOrd + Neg<Output = F::T> + Add<Output = F::T> + 'static,
+    F::T: Copy + PartialOrd + Sub<Output = F::T> + 'static,
     F::V: 'static,
 {
     pub fn seq_box<G, A>(self, self_end: F::T, next: A) -> AnimBox<F::T, F::V>
@@ -1017,6 +1033,7 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Debug, Clone)]
 pub struct CondClosure<F, G, H>(F, G, H);
 
 impl<F, G, H> Fun for CondClosure<F, G, H>
@@ -1241,24 +1258,24 @@ impl<F, G> Sub<Anim<G>> for Anim<F>
 where
     F: Fun,
     G: Fun<T = F::T>,
-    F::V: Neg + Add<Output = F::V>,
+    F::V: Sub<G::V>,
 {
-    type Output = Anim<AddClosure<F, NegClosure<G>>>;
+    type Output = Anim<SubClosure<F, G>>;
 
     fn sub(self, rhs: Anim<G>) -> Self::Output {
-        Anim(AddClosure(self.0, NegClosure(rhs.0)))
+        Anim(SubClosure(self.0, rhs.0))
     }
 }
 
 impl<V, F> Sub<V> for Anim<F>
 where
-    V: Copy + Neg<Output = V> + Add<Output = V>,
+    V: Copy,
     F: Fun<V = V>,
 {
-    type Output = Anim<AddClosure<F, ConstantClosure<F::T, F::V>>>;
+    type Output = Anim<SubClosure<F, ConstantClosure<F::T, F::V>>>;
 
     fn sub(self, rhs: F::V) -> Self::Output {
-        Anim(AddClosure(self.0, ConstantClosure::from(-rhs)))
+        Anim(SubClosure(self.0, ConstantClosure::from(rhs)))
     }
 }
 
@@ -1302,6 +1319,7 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Debug, Clone)]
 pub struct ConstantClosure<T, V>(V, PhantomData<T>);
 
 impl<T, V> Fun for ConstantClosure<T, V>
@@ -1336,6 +1354,7 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Debug, Clone)]
 pub struct AddClosure<F, G>(F, G);
 
 impl<F, G> Fun for AddClosure<F, G>
@@ -1354,6 +1373,26 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Debug, Clone)]
+pub struct SubClosure<F, G>(F, G);
+
+impl<F, G> Fun for SubClosure<F, G>
+where
+    F: Fun,
+    F::T: Copy,
+    G: Fun<T = F::T>,
+    F::V: Sub<G::V>,
+{
+    type T = F::T;
+    type V = <F::V as Sub<G::V>>::Output;
+
+    fn eval(&self, t: F::T) -> Self::V {
+        self.0.eval(t) - self.1.eval(t)
+    }
+}
+
+#[doc(hidden)]
+#[derive(Debug, Clone)]
 pub struct MulClosure<F, G>(F, G);
 
 impl<F, G> Fun for MulClosure<F, G>
