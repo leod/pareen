@@ -205,14 +205,15 @@ where
 {
     /// Combine two animations into one, yielding an animation having pairs as
     /// the values.
-    pub fn zip<W, G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = (F::V, W)>>
+    pub fn zip<G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = (F::V, G::V)>>
     where
-        G: Fun<T = F::T, V = W>,
+        G: Fun<T = F::T>,
         A: Into<Anim<G>>,
     {
-        let other = other.into();
-
-        fun(move |t| (self.eval(t), other.eval(t)))
+        // Nested closures result in exponential compilation time increase, and we
+        // expect zip to be used frequently. Thus, we avoid using `pareen::fun` here.
+        // For reference: https://github.com/rust-lang/rust/issues/72408
+        Anim(ZipClosure(self.0, other.into().0))
     }
 
     pub fn bind<W, G>(self, f: impl Fn(F::V) -> Anim<G>) -> Anim<impl Fun<T = F::T, V = W>>
@@ -223,14 +224,31 @@ where
     }
 }
 
+#[doc(hidden)]
+pub struct ZipClosure<F, G>(F, G);
+
+impl<F, G> Fun for ZipClosure<F, G>
+where
+    F: Fun,
+    F::T: Copy,
+    G: Fun<T = F::T>,
+{
+    type T = F::T;
+    type V = (F::V, G::V);
+
+    fn eval(&self, t: F::T) -> Self::V {
+        (self.0.eval(t), self.1.eval(t))
+    }
+}
+
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + Sub<Output = F::T>,
+    F::T: Copy + Add<Output = F::T> + Neg<Output = F::T>,
 {
     /// Shift an animation in time, so that it is moved to the right by `t_delay`.
     pub fn shift_time(self, t_delay: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        self.map_time(move |t| t - t_delay)
+        (id() - t_delay).map_anim(self)
     }
 }
 
@@ -315,7 +333,7 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + PartialOrd + Sub<Output = F::T>,
+    F::T: Copy + PartialOrd + Neg<Output = F::T> + Add<Output = F::T>,
 {
     /// Play two animations in sequence, first playing `self` until time
     /// `self_end` (non-inclusive), and then switching to `next`. Note that
@@ -361,7 +379,7 @@ where
 impl<F> Anim<F>
 where
     F: Fun + 'static,
-    F::T: Copy + PartialOrd + Sub<Output = F::T> + 'static,
+    F::T: Copy + PartialOrd + Neg<Output = F::T> + Add<Output = F::T> + 'static,
     F::V: 'static,
 {
     pub fn seq_box<G, A>(self, self_end: F::T, next: A) -> AnimBox<F::T, F::V>
@@ -1223,12 +1241,24 @@ impl<F, G> Sub<Anim<G>> for Anim<F>
 where
     F: Fun,
     G: Fun<T = F::T>,
-    F::V: Sub<G::V>,
+    F::V: Neg + Add<Output = F::V>,
 {
     type Output = Anim<AddClosure<F, NegClosure<G>>>;
 
     fn sub(self, rhs: Anim<G>) -> Self::Output {
         Anim(AddClosure(self.0, NegClosure(rhs.0)))
+    }
+}
+
+impl<V, F> Sub<V> for Anim<F>
+where
+    V: Copy + Neg<Output = V> + Add<Output = V>,
+    F: Fun<V = V>,
+{
+    type Output = Anim<AddClosure<F, ConstantClosure<F::T, F::V>>>;
+
+    fn sub(self, rhs: F::V) -> Self::Output {
+        Anim(AddClosure(self.0, ConstantClosure::from(-rhs)))
     }
 }
 
