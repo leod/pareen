@@ -1213,7 +1213,7 @@ where
 ///
 /// # Example
 /// ```
-/// let anim = pareen::cycle(3, 0.2);
+/// let anim = pareen::cycle(3, 5.0);
 /// assert_eq!(anim.eval(0.0), 0);
 /// assert_eq!(anim.eval(0.1), 0);
 /// assert_eq!(anim.eval(0.3), 1);
@@ -1227,11 +1227,11 @@ where
 pub fn cycle(end: usize, fps: f32) -> Anim<impl Fun<T = f32, V = usize>> {
     fun(move |t: f32| {
         if t < 0.0 {
-            let tau = (t.abs() / fps) as usize;
+            let tau = (t.abs() * fps) as usize;
 
             end - 1 - tau % end
         } else {
-            let tau = (t / fps) as usize;
+            let tau = (t * fps) as usize;
 
             tau % end
         }
