@@ -139,7 +139,7 @@ where
     /// let slower_anim = anim.map_time(|t: f32| t / 2.0);
     /// ```
     pub fn map_time<S>(self, f: impl Fn(S) -> F::T) -> Anim<impl Fun<T = S, V = F::V>> {
-        self.map_time_anim(fun(f))
+        fun(f).map_anim(self)
     }
 
     /// Converts from `Anim<F>` to `Anim<&F>`.
@@ -152,8 +152,10 @@ where
         G: Fun<T = F::V, V = W>,
         A: Into<Anim<G>>,
     {
-        let anim = anim.into();
-        fun(move |t| anim.eval(self.eval(t)))
+        // Nested closures result in exponential compilation time increase, and we
+        // expect map_anim to be used often. Thus, we avoid using `pareen::fun` here.
+        // For reference: https://github.com/rust-lang/rust/issues/72408
+        Anim(MapClosure(self.0, anim.into().0))
     }
 
     pub fn map_time_anim<S, G, A>(self, anim: A) -> Anim<impl Fun<T = S, V = F::V>>
@@ -161,8 +163,24 @@ where
         G: Fun<T = S, V = F::T>,
         A: Into<Anim<G>>,
     {
-        let anim = anim.into();
-        fun(move |t| self.eval(anim.eval(t)))
+        anim.into().map_anim(self)
+    }
+}
+
+#[doc(hidden)]
+#[derive(Debug, Clone)]
+pub struct MapClosure<F, G>(F, G);
+
+impl<F, G> Fun for MapClosure<F, G>
+where
+    F: Fun,
+    G: Fun<T = F::V>,
+{
+    type T = F::T;
+    type V = G::V;
+
+    fn eval(&self, t: F::T) -> G::V {
+        self.1.eval(self.0.eval(t))
     }
 }
 
@@ -188,14 +206,15 @@ where
 {
     /// Combine two animations into one, yielding an animation having pairs as
     /// the values.
-    pub fn zip<W, G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = (F::V, W)>>
+    pub fn zip<G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = (F::V, G::V)>>
     where
-        G: Fun<T = F::T, V = W>,
+        G: Fun<T = F::T>,
         A: Into<Anim<G>>,
     {
-        let other = other.into();
-
-        fun(move |t| (self.eval(t), other.eval(t)))
+        // Nested closures result in exponential compilation time increase, and we
+        // expect zip to be used frequently. Thus, we avoid using `pareen::fun` here.
+        // For reference: https://github.com/rust-lang/rust/issues/72408
+        Anim(ZipClosure(self.0, other.into().0))
     }
 
     pub fn bind<W, G>(self, f: impl Fn(F::V) -> Anim<G>) -> Anim<impl Fun<T = F::T, V = W>>
@@ -206,6 +225,24 @@ where
     }
 }
 
+#[doc(hidden)]
+#[derive(Debug, Clone)]
+pub struct ZipClosure<F, G>(F, G);
+
+impl<F, G> Fun for ZipClosure<F, G>
+where
+    F: Fun,
+    F::T: Copy,
+    G: Fun<T = F::T>,
+{
+    type T = F::T;
+    type V = (F::V, G::V);
+
+    fn eval(&self, t: F::T) -> Self::V {
+        (self.0.eval(t), self.1.eval(t))
+    }
+}
+
 impl<F> Anim<F>
 where
     F: Fun,
@@ -213,7 +250,7 @@ where
 {
     /// Shift an animation in time, so that it is moved to the right by `t_delay`.
     pub fn shift_time(self, t_delay: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        self.map_time(move |t| t - t_delay)
+        (id() - t_delay).map_anim(self)
     }
 }
 
@@ -251,7 +288,10 @@ where
         G: Fun<T = F::T, V = F::V>,
         A: Into<Anim<G>>,
     {
-        cond(fun(move |t| t < self_end), self, next)
+        // Nested closures result in exponential compilation time increase, and we
+        // expect switch to be used frequently. Thus, we avoid using `pareen::fun` here.
+        // For reference: https://github.com/rust-lang/rust/issues/72408
+        cond(switch_cond(self_end), self, next)
     }
 
     /// Play `self` in time range `range`, and `surround` outside of the time range.
@@ -276,8 +316,19 @@ where
         G: Fun<T = F::T, V = F::V>,
         A: Into<Anim<G>>,
     {
-        cond(move |t| range.contains(&t), self, surround)
+        // Nested closures result in exponential compilation time increase, and we
+        // expect surround to be used frequently. Thus, we avoid using `pareen::fun` here.
+        // For reference: https://github.com/rust-lang/rust/issues/72408
+        cond(surround_cond(range), self, surround)
     }
+}
+
+fn switch_cond<T: PartialOrd>(self_end: T) -> Anim<impl Fun<T = T, V = bool>> {
+    fun(move |t| t < self_end)
+}
+
+fn surround_cond<T: PartialOrd>(range: RangeInclusive<T>) -> Anim<impl Fun<T = T, V = bool>> {
+    fun(move |t| range.contains(&t))
 }
 
 impl<F> Anim<F>
@@ -375,7 +426,7 @@ where
     /// assert_approx_eq!(anim.eval(1.0f32), 0.0);
     /// ```
     pub fn backwards(self, end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        fun(move |t| self.eval(end - t))
+        (constant(end) - id()).map_anim(self)
     }
 }
 
@@ -965,21 +1016,43 @@ where
 /// assert_eq!(anim.eval(2), 1); // 2 * 2 <= 4
 /// assert_eq!(anim.eval(3), 3); // 3 * 3 > 4
 /// ```
-pub fn cond<T, V, F, G, H, Cond, A, B>(cond: Cond, a: A, b: B) -> Anim<impl Fun<T = T, V = V>>
+pub fn cond<F, G, H, Cond, A, B>(cond: Cond, a: A, b: B) -> Anim<impl Fun<T = F::T, V = G::V>>
 where
-    T: Copy,
-    F: Fun<T = T, V = bool>,
-    G: Fun<T = T, V = V>,
-    H: Fun<T = T, V = V>,
+    F::T: Copy,
+    F: Fun<V = bool>,
+    G: Fun<T = F::T>,
+    H: Fun<T = F::T, V = G::V>,
     Cond: Into<Anim<F>>,
     A: Into<Anim<G>>,
     B: Into<Anim<H>>,
 {
-    let cond = cond.into();
-    let a = a.into();
-    let b = b.into();
+    // Nested closures result in exponential compilation time increase, and we
+    // expect cond to be used often. Thus, we avoid using `pareen::fun` here.
+    // For reference: https://github.com/rust-lang/rust/issues/72408
+    Anim(CondClosure(cond.into().0, a.into().0, b.into().0))
+}
 
-    fun(move |t| if cond.eval(t) { a.eval(t) } else { b.eval(t) })
+#[doc(hidden)]
+#[derive(Debug, Clone)]
+pub struct CondClosure<F, G, H>(F, G, H);
+
+impl<F, G, H> Fun for CondClosure<F, G, H>
+where
+    F::T: Copy,
+    F: Fun<V = bool>,
+    G: Fun<T = F::T>,
+    H: Fun<T = F::T, V = G::V>,
+{
+    type T = F::T;
+    type V = G::V;
+
+    fn eval(&self, t: F::T) -> G::V {
+        if self.0.eval(t) {
+            self.1.eval(t)
+        } else {
+            self.2.eval(t)
+        }
+    }
 }
 
 /// Linearly interpolate between two animations, starting at time zero and
@@ -1187,10 +1260,22 @@ where
     G: Fun<T = F::T>,
     F::V: Sub<G::V>,
 {
-    type Output = Anim<AddClosure<F, NegClosure<G>>>;
+    type Output = Anim<SubClosure<F, G>>;
 
     fn sub(self, rhs: Anim<G>) -> Self::Output {
-        Anim(AddClosure(self.0, NegClosure(rhs.0)))
+        Anim(SubClosure(self.0, rhs.0))
+    }
+}
+
+impl<V, F> Sub<V> for Anim<F>
+where
+    V: Copy,
+    F: Fun<V = V>,
+{
+    type Output = Anim<SubClosure<F, ConstantClosure<F::T, F::V>>>;
+
+    fn sub(self, rhs: F::V) -> Self::Output {
+        Anim(SubClosure(self.0, ConstantClosure::from(rhs)))
     }
 }
 
@@ -1234,6 +1319,7 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Debug, Clone)]
 pub struct ConstantClosure<T, V>(V, PhantomData<T>);
 
 impl<T, V> Fun for ConstantClosure<T, V>
@@ -1268,6 +1354,7 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Debug, Clone)]
 pub struct AddClosure<F, G>(F, G);
 
 impl<F, G> Fun for AddClosure<F, G>
@@ -1286,6 +1373,26 @@ where
 }
 
 #[doc(hidden)]
+#[derive(Debug, Clone)]
+pub struct SubClosure<F, G>(F, G);
+
+impl<F, G> Fun for SubClosure<F, G>
+where
+    F: Fun,
+    F::T: Copy,
+    G: Fun<T = F::T>,
+    F::V: Sub<G::V>,
+{
+    type T = F::T;
+    type V = <F::V as Sub<G::V>>::Output;
+
+    fn eval(&self, t: F::T) -> Self::V {
+        self.0.eval(t) - self.1.eval(t)
+    }
+}
+
+#[doc(hidden)]
+#[derive(Debug, Clone)]
 pub struct MulClosure<F, G>(F, G);
 
 impl<F, G> Fun for MulClosure<F, G>

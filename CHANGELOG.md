@@ -1,4 +1,7 @@
 # Changelog
+## Version 0.2.6
+- Make exponential slowdown of compile times less likely
+
 ## Version 0.2.5
 - Add `Anim::repeat`, `Anim::hold` and `Anim::seq_continue`
 - Allow boxed animations
