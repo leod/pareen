@@ -426,7 +426,7 @@ where
     /// assert_approx_eq!(anim.eval(1.0f32), 0.0);
     /// ```
     pub fn backwards(self, end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        fun(move |t| self.eval(end - t))
+        (constant(end) - id()).map_anim(self)
     }
 }
 
