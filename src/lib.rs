@@ -1100,6 +1100,36 @@ where
     })
 }
 
+/// Count from 0 to `end` (non-inclusive) cyclically, at the given frames per
+/// second rate.
+///
+/// # Example
+/// ```
+/// let anim = pareen::cycle(3, 0.2);
+/// assert_eq!(anim.eval(0.0), 0);
+/// assert_eq!(anim.eval(0.1), 0);
+/// assert_eq!(anim.eval(0.3), 1);
+/// assert_eq!(anim.eval(0.5), 2);
+/// assert_eq!(anim.eval(0.65), 0);
+///
+/// assert_eq!(anim.eval(-0.1), 2);
+/// assert_eq!(anim.eval(-0.3), 1);
+/// assert_eq!(anim.eval(-0.5), 0);
+/// ```
+pub fn cycle(end: usize, fps: f32) -> Anim<impl Fun<T = f32, V = usize>> {
+    fun(move |t: f32| {
+        if t < 0.0 {
+            let tau = (t.abs() / fps) as usize;
+
+            end - 1 - tau % end
+        } else {
+            let tau = (t / fps) as usize;
+
+            tau % end
+        }
+    })
+}
+
 /// Build an animation that depends on matching some expression.
 ///
 /// Importantly, this macro allows returning animations of a different type in
