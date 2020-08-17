@@ -2,6 +2,7 @@
 ## Version 0.2.6
 - Make exponential slowdown of compile times less likely
 - Add `cycle`
+- Add `quadratic`
 
 ## Version 0.2.5 (2020-07-18)
 - Add `Anim::repeat`, `Anim::hold` and `Anim::seq_continue`
