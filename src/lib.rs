@@ -1087,6 +1087,18 @@ where
     a.into().lerp(b.into())
 }
 
+/// Evaluate a quadratic polynomial in time.
+pub fn quadratic<T>(w: &[T; 3]) -> Anim<impl Fun<T = T, V = T> + '_>
+where
+    T: Float,
+{
+    fun(move |t| {
+        let t2 = t * t;
+
+        w[0] * t2 + w[1] * t + w[2]
+    })
+}
+
 /// Evaluate a cubic polynomial in time.
 pub fn cubic<T>(w: &[T; 4]) -> Anim<impl Fun<T = T, V = T> + '_>
 where
