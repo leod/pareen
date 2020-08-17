@@ -358,7 +358,7 @@ where
 {
     /// Shift an animation in time, so that it is moved to the right by `t_delay`.
     pub fn shift_time(self, t_delay: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        (id() - t_delay).map_anim(self)
+        (id::<F::T, F::T>() - t_delay).map_anim(self)
     }
 }
 
@@ -1048,7 +1048,7 @@ where
 /// ```
 /// ```
 /// # use assert_approx_eq::assert_approx_eq;
-/// let anim = pareen::id() * 3.0f32 + 4.0;
+/// let anim = pareen::id::<f32, f32>() * 3.0 + 4.0;
 ///
 /// assert_approx_eq!(anim.eval(0.0), 4.0);
 /// assert_approx_eq!(anim.eval(100.0), 304.0);
@@ -1360,6 +1360,8 @@ where
     fun(move |t| E::ease_in_out(t, start, delta, duration))
 }
 
+struct WrapFn<T, V, F: Fn(T) -> V>(F, PhantomData<(T, V)>);
+
 impl<T, V, F> From<F> for Anim<WrapFn<T, V, F>>
 where
     F: Fn(T) -> V,
@@ -1368,8 +1370,6 @@ where
         Anim(WrapFn(f, PhantomData))
     }
 }
-
-struct WrapFn<T, V, F: Fn(T) -> V>(F, PhantomData<(T, V)>);
 
 impl<T, V, F> Fun for WrapFn<T, V, F>
 where
@@ -1396,14 +1396,16 @@ where
     }
 }
 
-impl<V, F> Add<V> for Anim<F>
+impl<W, F> Add<W> for Anim<F>
 where
-    V: Copy,
-    F: Fun<V = V>,
+    W: Copy,
+    F: Fun,
+    F::T: Copy,
+    F::V: Add<W>,
 {
-    type Output = Anim<AddClosure<F, ConstantClosure<F::T, F::V>>>;
+    type Output = Anim<AddClosure<F, ConstantClosure<F::T, W>>>;
 
-    fn add(self, rhs: F::V) -> Self::Output {
+    fn add(self, rhs: W) -> Self::Output {
         Anim(AddClosure(self.0, ConstantClosure::from(rhs)))
     }
 }
@@ -1421,14 +1423,16 @@ where
     }
 }
 
-impl<V, F> Sub<V> for Anim<F>
+impl<W, F> Sub<W> for Anim<F>
 where
-    V: Copy,
-    F: Fun<V = V>,
+    W: Copy,
+    F: Fun,
+    F::T: Copy,
+    F::V: Sub<W>,
 {
-    type Output = Anim<SubClosure<F, ConstantClosure<F::T, F::V>>>;
+    type Output = Anim<SubClosure<F, ConstantClosure<F::T, W>>>;
 
-    fn sub(self, rhs: F::V) -> Self::Output {
+    fn sub(self, rhs: W) -> Self::Output {
         Anim(SubClosure(self.0, ConstantClosure::from(rhs)))
     }
 }
@@ -1436,8 +1440,8 @@ where
 impl<F, G> Mul<Anim<G>> for Anim<F>
 where
     F: Fun,
-    F::T: Copy,
     G: Fun<T = F::T>,
+    F::T: Copy,
     F::V: Mul<G::V>,
 {
     type Output = Anim<MulClosure<F, G>>;
@@ -1447,15 +1451,16 @@ where
     }
 }
 
-impl<V, F> Mul<V> for Anim<F>
+impl<W, F> Mul<W> for Anim<F>
 where
-    V: Copy,
-    F: Fun<V = V>,
+    W: Copy,
+    F: Fun,
     F::T: Copy,
+    F::V: Mul<W>,
 {
-    type Output = Anim<MulClosure<F, ConstantClosure<F::T, F::V>>>;
+    type Output = Anim<MulClosure<F, ConstantClosure<F::T, W>>>;
 
-    fn mul(self, rhs: F::V) -> Self::Output {
+    fn mul(self, rhs: W) -> Self::Output {
         Anim(MulClosure(self.0, ConstantClosure::from(rhs)))
     }
 }
@@ -1514,8 +1519,8 @@ pub struct AddClosure<F, G>(F, G);
 impl<F, G> Fun for AddClosure<F, G>
 where
     F: Fun,
-    F::T: Copy,
     G: Fun<T = F::T>,
+    F::T: Copy,
     F::V: Add<G::V>,
 {
     type T = F::T;
@@ -1533,8 +1538,8 @@ pub struct SubClosure<F, G>(F, G);
 impl<F, G> Fun for SubClosure<F, G>
 where
     F: Fun,
-    F::T: Copy,
     G: Fun<T = F::T>,
+    F::T: Copy,
     F::V: Sub<G::V>,
 {
     type T = F::T;
@@ -1552,8 +1557,8 @@ pub struct MulClosure<F, G>(F, G);
 impl<F, G> Fun for MulClosure<F, G>
 where
     F: Fun,
-    F::T: Copy,
     G: Fun<T = F::T>,
+    F::T: Copy,
     F::V: Mul<G::V>,
 {
     type T = F::T;
