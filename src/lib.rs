@@ -936,7 +936,7 @@ where
 /// ```
 /// ```
 /// # use assert_approx_eq::assert_approx_eq;
-/// let anim = pareen::id() * 3.0f32 + 4.0;
+/// let anim = pareen::id::<f32, f32>() * 3.0 + 4.0;
 ///
 /// assert_approx_eq!(anim.eval(0.0), 4.0);
 /// assert_approx_eq!(anim.eval(100.0), 304.0);
@@ -1324,8 +1324,8 @@ where
 impl<F, G> Mul<Anim<G>> for Anim<F>
 where
     F: Fun,
-    F::T: Copy,
     G: Fun<T = F::T>,
+    F::T: Copy,
     F::V: Mul<G::V>,
 {
     type Output = Anim<MulClosure<F, G>>;
@@ -1335,15 +1335,16 @@ where
     }
 }
 
-impl<V, F> Mul<V> for Anim<F>
+impl<F, W> Mul<W> for Anim<F>
 where
-    V: Copy,
-    F: Fun<V = V>,
+    F: Fun,
+    W: Copy,
     F::T: Copy,
+    F::V: Mul<W>,
 {
-    type Output = Anim<MulClosure<F, ConstantClosure<F::T, F::V>>>;
+    type Output = Anim<MulClosure<F, ConstantClosure<F::T, W>>>;
 
-    fn mul(self, rhs: F::V) -> Self::Output {
+    fn mul(self, rhs: W) -> Self::Output {
         Anim(MulClosure(self.0, ConstantClosure::from(rhs)))
     }
 }
@@ -1402,8 +1403,8 @@ pub struct AddClosure<F, G>(F, G);
 impl<F, G> Fun for AddClosure<F, G>
 where
     F: Fun,
-    F::T: Copy,
     G: Fun<T = F::T>,
+    F::T: Copy,
     F::V: Add<G::V>,
 {
     type T = F::T;
@@ -1421,8 +1422,8 @@ pub struct SubClosure<F, G>(F, G);
 impl<F, G> Fun for SubClosure<F, G>
 where
     F: Fun,
-    F::T: Copy,
     G: Fun<T = F::T>,
+    F::T: Copy,
     F::V: Sub<G::V>,
 {
     type T = F::T;
@@ -1440,8 +1441,8 @@ pub struct MulClosure<F, G>(F, G);
 impl<F, G> Fun for MulClosure<F, G>
 where
     F: Fun,
-    F::T: Copy,
     G: Fun<T = F::T>,
+    F::T: Copy,
     F::V: Mul<G::V>,
 {
     type T = F::T;
