@@ -625,6 +625,10 @@ where
         self.map_time(move |t| (t - time_shift) * time_scale)
     }
 
+    pub fn scale_to_dur(self, dur: F::T) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
+        self.scale_time(F::T::one() / dur).dur(dur)
+    }
+
     /// Transform an animation in time, so that its time `[0 .. 1]` is shifted
     /// and scaled into the given `range`.
     ///
