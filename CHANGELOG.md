@@ -1,5 +1,5 @@
 # Changelog
-## Version 0.2.6
+## Version 0.2.6 (2020-08-17)
 - Make exponential slowdown of compile times less likely
 - Add `cycle`
 - Add `quadratic`
