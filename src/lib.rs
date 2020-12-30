@@ -37,6 +37,7 @@
 //! ```
 
 mod anim;
+mod anim_box;
 mod anim_with_dur;
 mod arithmetic;
 mod primitives;
@@ -45,6 +46,7 @@ mod primitives;
 mod easer_combinators;
 
 pub use anim::{cond, lerp, Anim, Fun};
+pub use anim_box::AnimBox;
 pub use primitives::{
     circle, constant, cubic, cycle, fun, half_circle, id, prop, quadratic, quarter_circle,
 };
