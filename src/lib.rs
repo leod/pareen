@@ -15,7 +15,7 @@
 //! ```rust
 //! # use assert_approx_eq::assert_approx_eq;
 //! // An animation returning a constant value
-//! let anim1 = pareen::constant(1.0f64);
+//! let anim1 = pareen::c(1.0f64);
 //!
 //! // Animations can be evaluated at any time
 //! let value = anim1.eval(0.5);
@@ -48,7 +48,7 @@ mod easer_combinators;
 pub use anim::{cond, lerp, Anim, Fun};
 pub use anim_box::AnimBox;
 pub use primitives::{
-    circle, constant, cubic, cycle, fun, half_circle, id, prop, quadratic, quarter_circle,
+    c, circle, cubic, cycle, fun, half_circle, id, prop, quadratic, quarter_circle, IntoAnim,
 };
 
 #[cfg(feature = "easer")]
