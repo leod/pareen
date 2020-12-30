@@ -37,7 +37,7 @@
 //! ```
 
 use std::marker::PhantomData;
-use std::ops::{Add, Deref, Mul, Neg, RangeInclusive, Sub};
+use std::ops::{Add, Deref, Div, Mul, Neg, RangeInclusive, Sub};
 
 use num_traits::{Float, FloatConst, Num, One, Zero};
 
@@ -104,6 +104,13 @@ impl<'a, T, V> Fun for Box<dyn Fun<T = T, V = V>> {
 #[derive(Clone, Debug)]
 pub struct Anim<F>(pub F);
 
+/// An `Anim` together with the duration that it is intended to be played for.
+///
+/// Explicitly carrying the duration around makes it easier to sequentially
+/// compose animations in some places.
+#[derive(Clone, Debug)]
+pub struct AnimWithDur<F: Fun>(pub Anim<F>, pub F::T);
+
 impl<F> Anim<F>
 where
     F: Fun,
@@ -111,6 +118,15 @@ where
     /// Evaluate the animation at time `t`.
     pub fn eval(&self, t: F::T) -> F::V {
         self.0.eval(t)
+    }
+
+    /// Tag this animation with the duration that it is intended to be played
+    /// for.
+    ///
+    /// Note that using this tagging is completely optional, but it may
+    /// make it easier to combine animations sometimes.
+    pub fn dur(self, t: F::T) -> AnimWithDur<F> {
+        AnimWithDur(self, t)
     }
 
     /// Transform an animation so that it applies a given function to its
@@ -164,6 +180,98 @@ where
         A: Into<Anim<G>>,
     {
         anim.into().map_anim(self)
+    }
+}
+
+impl<F> Anim<F>
+where
+    F: Fun,
+    F::T: Copy + Mul<Output = F::T>,
+{
+    pub fn scale_time(self, t_scale: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        self.map_time(move |t| t * t_scale)
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+{
+    pub fn dur(self, t: F::T) -> AnimWithDur<F> {
+        AnimWithDur(self.0, t)
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+    F::T: Copy + PartialOrd + Sub<Output = F::T>,
+{
+    pub fn seq<G>(self, next: Anim<G>) -> Anim<impl Fun<T = F::T, V = F::V>>
+    where
+        G: Fun<T = F::T, V = F::V>,
+    {
+        self.0.seq(self.1, next)
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+    F::T: Copy + PartialOrd + Sub<Output = F::T> + Add<Output = F::T>,
+{
+    pub fn seq_with_dur<G>(self, next: AnimWithDur<G>) -> AnimWithDur<impl Fun<T = F::T, V = F::V>>
+    where
+        G: Fun<T = F::T, V = F::V>,
+    {
+        let dur = self.1 + next.1;
+        AnimWithDur(self.seq(next.0), dur)
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+    F::T: Copy + Float,
+{
+    pub fn repeat(self) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        self.0.repeat(self.1)
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+    F::T: Copy + Sub<Output = F::T>,
+{
+    pub fn backwards(self) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
+        AnimWithDur(self.0.backwards(self.1), self.1)
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+    F::T: Copy + Mul<Output = F::T> + Div<Output = F::T>,
+{
+    pub fn scale_time(self, t_scale: F::T) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
+        AnimWithDur(self.0.scale_time(t_scale), self.1 / t_scale)
+    }
+}
+
+#[macro_export]
+macro_rules! seq_with_dur {
+    (
+        $expr:expr $(,)?
+    ) => {
+        $expr
+    };
+
+    (
+        $head:expr,
+        $($tail:expr $(,)?)+
+    ) => {
+        $head.seq_with_dur($crate::seq_with_dur!($($tail,)*))
     }
 }
 
@@ -515,6 +623,10 @@ where
         let time_scale = F::T::one() / (*range.end() - *range.start());
 
         self.map_time(move |t| (t - time_shift) * time_scale)
+    }
+
+    pub fn scale_to_dur(self, dur: F::T) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
+        self.scale_time(F::T::one() / dur).dur(dur)
     }
 
     /// Transform an animation in time, so that its time `[0 .. 1]` is shifted
@@ -1117,7 +1229,7 @@ where
 ///
 /// # Example
 /// ```
-/// let anim = pareen::cycle(3, 0.2);
+/// let anim = pareen::cycle(3, 5.0);
 /// assert_eq!(anim.eval(0.0), 0);
 /// assert_eq!(anim.eval(0.1), 0);
 /// assert_eq!(anim.eval(0.3), 1);
@@ -1131,11 +1243,11 @@ where
 pub fn cycle(end: usize, fps: f32) -> Anim<impl Fun<T = f32, V = usize>> {
     fun(move |t: f32| {
         if t < 0.0 {
-            let tau = (t.abs() / fps) as usize;
+            let tau = (t.abs() * fps) as usize;
 
             end - 1 - tau % end
         } else {
-            let tau = (t / fps) as usize;
+            let tau = (t * fps) as usize;
 
             tau % end
         }
