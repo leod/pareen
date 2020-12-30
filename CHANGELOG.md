@@ -3,6 +3,7 @@
 - Make operator overloading of `Mul`, `Add` and `Sub` more flexible.
   This may break compilation in some cases, since types are more generic now.
 - Add `AnimWithDur` for easier composition of animations that have a fixed duration
+- Internal refactoring: split into multiple modules
 
 ## Version 0.2.6 (2020-08-17)
 - Make exponential slowdown of compile times less likely
