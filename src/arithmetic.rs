@@ -1,6 +1,6 @@
 use std::ops::{Add, Mul, Neg, Sub};
 
-use crate::{Anim, Fun, primitives::ConstantClosure};
+use crate::{primitives::ConstantClosure, Anim, Fun};
 
 impl<F, G> Add<Anim<G>> for Anim<F>
 where

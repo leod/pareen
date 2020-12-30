@@ -36,20 +36,17 @@
 //! assert_approx_eq!(value, 0.0);
 //! ```
 
-mod arithmetic;
-
 mod anim;
+mod anim_with_dur;
+mod arithmetic;
 mod primitives;
 
 #[cfg(feature = "easer")]
 mod easer_combinators;
 
-pub use anim::{
-    lerp, cond, Anim, Fun,
-};
+pub use anim::{cond, lerp, Anim, Fun};
 pub use primitives::{
-    circle, constant, cycle, fun, half_circle, id, 
-cubic, prop, quadratic, quarter_circle, 
+    circle, constant, cubic, cycle, fun, half_circle, id, prop, quadratic, quarter_circle,
 };
 
 #[cfg(feature = "easer")]

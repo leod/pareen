@@ -1,5 +1,5 @@
-use std::ops::Mul;
 use std::marker::PhantomData;
+use std::ops::Mul;
 
 use crate::{Anim, Fun};
 
@@ -222,4 +222,3 @@ pub fn cycle(end: usize, fps: f32) -> Anim<impl Fun<T = f32, V = usize>> {
         }
     })
 }
-
