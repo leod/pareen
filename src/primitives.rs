@@ -5,6 +5,34 @@ use crate::{Anim, Fun};
 
 use num_traits::{Float, FloatConst};
 
+pub trait IntoAnim<T, V> {
+    type F: Fun<T = T, V = V>;
+
+    fn into_anim(self) -> Anim<Self::F>;
+}
+
+impl<F> IntoAnim<F::T, F::V> for Anim<F>
+where
+    F: Fun,
+{
+    type F = F;
+
+    fn into_anim(self) -> Anim<Self::F> {
+        self
+    }
+}
+
+impl<T, V, F> IntoAnim<T, V> for F
+where
+    F: Fn(T) -> V,
+{
+    type F = WrapFn<T, V, F>;
+
+    fn into_anim(self) -> Anim<Self::F> {
+        Anim(WrapFn(self, PhantomData))
+    }
+}
+
 /// Turn any function `Fn(T) -> V` into an [`Anim`](struct.Anim.html).
 ///
 /// # Example
@@ -23,7 +51,7 @@ pub fn fun<T, V>(f: impl Fn(T) -> V) -> Anim<impl Fun<T = T, V = V>> {
     From::from(f)
 }
 
-struct WrapFn<T, V, F: Fn(T) -> V>(F, PhantomData<(T, V)>);
+pub struct WrapFn<T, V, F: Fn(T) -> V>(F, PhantomData<(T, V)>);
 
 impl<T, V, F> From<F> for Anim<WrapFn<T, V, F>>
 where
@@ -51,13 +79,13 @@ where
 /// # Example
 /// ```
 /// # use assert_approx_eq::assert_approx_eq;
-/// let anim = pareen::constant(1.0f32);
+/// let anim = pareen::c(1.0f32);
 ///
 /// assert_approx_eq!(anim.eval(-10000.0f32), 1.0);
 /// assert_approx_eq!(anim.eval(0.0), 1.0);
 /// assert_approx_eq!(anim.eval(42.0), 1.0);
 /// ```
-pub fn constant<T, V: Copy>(c: V) -> Anim<impl Fun<T = T, V = V>> {
+pub fn c<T, V: Copy>(c: V) -> Anim<impl Fun<T = T, V = V>> {
     fun(move |_| c)
 }
 
@@ -121,7 +149,7 @@ where
 ///
 /// # Examples
 /// ```
-/// let anim = pareen::id::<isize, isize>();
+/// let anim = pareen::id::<isize>();
 ///
 /// assert_eq!(anim.eval(-100), -100);
 /// assert_eq!(anim.eval(0), 0);
@@ -129,16 +157,13 @@ where
 /// ```
 /// ```
 /// # use assert_approx_eq::assert_approx_eq;
-/// let anim = pareen::id::<f32, f32>() * 3.0 + 4.0;
+/// let anim = pareen::id::<f32>() * 3.0 + 4.0;
 ///
 /// assert_approx_eq!(anim.eval(0.0), 4.0);
 /// assert_approx_eq!(anim.eval(100.0), 304.0);
 /// ```
-pub fn id<T, V>() -> Anim<impl Fun<T = T, V = V>>
-where
-    V: From<T>,
-{
-    fun(From::from)
+pub fn id<T>() -> Anim<impl Fun<T = T, V = T>> {
+    fun(|t| t)
 }
 
 /// Proportionally increase value from zero to 2π.

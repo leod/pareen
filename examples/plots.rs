@@ -1,5 +1,7 @@
 use gnuplot::{AutoOption, AxesCommon, Color, Figure, LineWidth};
 
+use pareen::{Anim, Fun};
+
 fn main() {
     let mut plots = Plots { plots: Vec::new() };
 
@@ -19,7 +21,7 @@ fn main() {
     );
     plots.add(
         "switch from 1 to 2 at time=0.5",
-        pareen::constant(1.0).switch(0.5, 2.0),
+        pareen::c(1.0).switch(0.5, 2.0),
     );
 
     #[cfg(feature = "easer")]
@@ -36,11 +38,7 @@ fn main() {
     plots.show_gnuplot();
 }
 
-fn sample(
-    n: usize,
-    max_t: f32,
-    anim: pareen::Anim<impl pareen::Fun<T = f32, V = f32>>,
-) -> (Vec<f32>, Vec<f32>) {
+fn sample(n: usize, max_t: f32, anim: Anim<impl Fun<T = f32, V = f32>>) -> (Vec<f32>, Vec<f32>) {
     let mut ts = Vec::new();
     let mut vs = Vec::new();
 

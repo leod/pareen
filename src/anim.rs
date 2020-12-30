@@ -2,7 +2,7 @@ use std::ops::{Add, Mul, RangeInclusive, Sub};
 
 use num_traits::{Float, Num, One, Zero};
 
-use crate::{constant, fun, id};
+use crate::{c, fun, id, IntoAnim};
 
 /// A `Fun` represents anything that maps from some type `T` to another
 /// type `V`.
@@ -52,11 +52,22 @@ where
 #[derive(Clone, Debug)]
 pub struct Anim<F>(pub F);
 
+impl<F> Fun for Anim<F>
+where
+    F: Fun,
+{
+    type T = F::T;
+    type V = F::V;
+
+    fn eval(&self, t: Self::T) -> Self::V {
+        self.0.eval(t)
+    }
+}
+
 impl<F> Anim<F>
 where
     F: Fun,
 {
-    /// Evaluate the animation at time `t`.
     pub fn eval(&self, t: F::T) -> F::V {
         self.0.eval(t)
     }
@@ -69,12 +80,18 @@ where
     /// Turn `(2.0 * t)` into `(2.0 * t).sqrt() + 2.0 * t`:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim = pareen::prop(2.0f32).map(|value| value.sqrt() + value);
+    /// let anim = pareen::prop(2.0f32).map(|value: f32| value.sqrt() + value);
     ///
     /// assert_approx_eq!(anim.eval(1.0), 2.0f32.sqrt() + 2.0);
     /// ```
-    pub fn map<W>(self, f: impl Fn(F::V) -> W) -> Anim<impl Fun<T = F::T, V = W>> {
-        self.map_anim(fun(f))
+    pub fn map<W, B>(self, anim: B) -> Anim<impl Fun<T = F::T, V = W>>
+    where
+        B: IntoAnim<F::V, W>,
+    {
+        // Nested closures result in exponential compilation time increase, and we
+        // expect map_anim to be used often. Thus, we avoid using `pareen::fun` here.
+        // For reference: https://github.com/rust-lang/rust/issues/72408
+        Anim(MapClosure(self, anim.into_anim()))
     }
 
     /// Transform an animation so that it modifies time according to the given
@@ -86,32 +103,16 @@ where
     /// let anim = pareen::cubic(&[1.0, 1.0, 1.0, 1.0]);
     /// let slower_anim = anim.map_time(|t: f32| t / 2.0);
     /// ```
-    pub fn map_time<S>(self, f: impl Fn(S) -> F::T) -> Anim<impl Fun<T = S, V = F::V>> {
-        fun(f).map_anim(self)
+    pub fn map_time<S, B>(self, anim: B) -> Anim<impl Fun<T = S, V = F::V>>
+    where
+        B: IntoAnim<S, F::T>,
+    {
+        anim.into_anim().map(self)
     }
 
     /// Converts from `Anim<F>` to `Anim<&F>`.
     pub fn as_ref(&self) -> Anim<&F> {
         Anim(&self.0)
-    }
-
-    pub fn map_anim<W, G, A>(self, anim: A) -> Anim<impl Fun<T = F::T, V = W>>
-    where
-        G: Fun<T = F::V, V = W>,
-        A: Into<Anim<G>>,
-    {
-        // Nested closures result in exponential compilation time increase, and we
-        // expect map_anim to be used often. Thus, we avoid using `pareen::fun` here.
-        // For reference: https://github.com/rust-lang/rust/issues/72408
-        Anim(MapClosure(self.0, anim.into().0))
-    }
-
-    pub fn map_time_anim<S, G, A>(self, anim: A) -> Anim<impl Fun<T = S, V = F::V>>
-    where
-        G: Fun<T = S, V = F::T>,
-        A: Into<Anim<G>>,
-    {
-        anim.into().map_anim(self)
     }
 }
 
@@ -127,7 +128,7 @@ where
 
 #[doc(hidden)]
 #[derive(Debug, Clone)]
-pub struct MapClosure<F, G>(F, G);
+pub struct MapClosure<F, G>(Anim<F>, Anim<G>);
 
 impl<F, G> Fun for MapClosure<F, G>
 where
@@ -149,15 +150,14 @@ where
 {
     /// Combine two animations into one, yielding an animation having pairs as
     /// the values.
-    pub fn zip<G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = (F::V, G::V)>>
+    pub fn zip<B, W>(self, other: B) -> Anim<impl Fun<T = F::T, V = (F::V, G::V)>>
     where
-        G: Fun<T = F::T>,
-        A: Into<Anim<G>>,
+        B: IntoAnim<F::T, W>,
     {
         // Nested closures result in exponential compilation time increase, and we
         // expect zip to be used frequently. Thus, we avoid using `pareen::fun` here.
         // For reference: https://github.com/rust-lang/rust/issues/72408
-        Anim(ZipClosure(self.0, other.into().0))
+        Anim(ZipClosure(self.0, other.into_anim().0))
     }
 
     pub fn bind<W, G>(self, f: impl Fn(F::V) -> Anim<G>) -> Anim<impl Fun<T = F::T, V = W>>
@@ -193,7 +193,7 @@ where
 {
     /// Shift an animation in time, so that it is moved to the right by `t_delay`.
     pub fn shift_time(self, t_delay: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        (id::<F::T, F::T>() - t_delay).map_anim(self)
+        (id::<F::T>() - t_delay).map(self)
     }
 }
 
@@ -209,7 +209,7 @@ where
     /// Switch from one constant value to another:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim = pareen::constant(1.0f32).switch(0.5f32, 2.0);
+    /// let anim = pareen::c(1.0f32).switch(0.5f32, 2.0);
     ///
     /// assert_approx_eq!(anim.eval(0.0), 1.0);
     /// assert_approx_eq!(anim.eval(0.5), 2.0);
@@ -242,7 +242,7 @@ where
     /// # Examples
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim = pareen::constant(10.0f32).surround(2.0..=5.0, 20.0);
+    /// let anim = pareen::c(10.0f32).surround(2.0..=5.0, 20.0);
     ///
     /// assert_approx_eq!(anim.eval(0.0), 20.0);
     /// assert_approx_eq!(anim.eval(2.0), 10.0);
@@ -285,7 +285,7 @@ where
     pub fn hold(self, self_end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
         let end_value = self.eval(self_end);
 
-        self.switch(self_end, constant(end_value))
+        self.switch(self_end, c(end_value))
     }
 }
 
@@ -302,7 +302,7 @@ where
     /// Stay at value `5.0` for ten seconds, then increase value proportionally:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim_1 = pareen::constant(5.0f32);
+    /// let anim_1 = pareen::c(5.0f32);
     /// let anim_2 = pareen::prop(2.0f32) + 5.0;
     /// let anim = anim_1.seq(10.0, anim_2);
     ///
@@ -351,7 +351,7 @@ where
     /// assert_approx_eq!(anim.eval(1.0f32), 0.0);
     /// ```
     pub fn backwards(self, end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        (constant(end) - id()).map_anim(self)
+        (c(end) - id()).map(self)
     }
 }
 
@@ -401,12 +401,12 @@ where
 
     /// Apply `Float::powf` to the animation values.
     pub fn powf(self, e: F::V) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        self.map(move |v| v.powf(e))
+        self.map(move |v: F::V| v.powf(e))
     }
 
     /// Apply `Float::powi` to the animation values.
     pub fn powi(self, n: i32) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        self.map(move |v| v.powi(n))
+        self.map(move |v: F::V| v.powi(n))
     }
 }
 
@@ -516,7 +516,7 @@ where
     /// Linearly interpolate between two constant values:
     /// ```
     /// # use assert_approx_eq::assert_approx_eq;
-    /// let anim = pareen::constant(5.0f32).lerp(10.0);
+    /// let anim = pareen::c(5.0f32).lerp(10.0);
     ///
     /// assert_approx_eq!(anim.eval(0.0f32), 5.0);
     /// assert_approx_eq!(anim.eval(0.5), 7.5);
@@ -561,7 +561,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// let anim1 = pareen::constant(Some(42)).unwrap_or(-1);
+    /// let anim1 = pareen::c(Some(42)).unwrap_or(-1);
     /// assert_eq!(anim1.eval(2), 42);
     /// assert_eq!(anim1.eval(3), 42);
     /// ```
@@ -578,7 +578,7 @@ where
         A: Into<Anim<G>>,
     {
         self.zip(default.into())
-            .map(|(v, default)| v.unwrap_or(default))
+            .map(|(v, default): (Option<V>, V)| v.unwrap_or(default))
     }
 
     /// Applies a function to the contained value (if any), or returns the
@@ -596,7 +596,7 @@ where
     /// ) -> pareen::Anim<impl pareen::Fun<T = f32, V = f32>> {
     ///     let move_speed = 2.0f32;
     ///
-    ///     pareen::constant(move_dir).map_or(
+    ///     pareen::c(move_dir).map_or(
     ///         0.0,
     ///         move |move_dir| pareen::prop(move_dir) * move_speed,
     ///     )
@@ -647,7 +647,7 @@ where
 /// different types:
 /// ```compile_fail
 /// let cond = true;
-/// let anim = if cond { pareen::constant(1) } else { pareen::id() };
+/// let anim = if cond { pareen::c(1) } else { pareen::id() };
 /// ```
 ///
 /// However, this does compile:
@@ -757,7 +757,7 @@ where
 ///
 /// fn my_anim(state: MyPlayerState) -> pareen::Anim<impl pareen::Fun<T = f64, V = f64>> {
 ///     pareen::anim_match!(state;
-///         MyPlayerState::Standing => pareen::constant(0.0),
+///         MyPlayerState::Standing => pareen::c(0.0),
 ///         MyPlayerState::Running => pareen::prop(1.0),
 ///         MyPlayerState::Jumping => pareen::id().powi(2),
 ///     )
