@@ -37,13 +37,17 @@
 //! ```
 
 mod anim;
+mod primitives;
 
 #[cfg(feature = "easer")]
 mod easer_combinators;
 
 pub use anim::{
-    circle, constant, cubic, cycle, fun, half_circle, id, lerp, prop, quadratic, quarter_circle, cond,
-    Anim, Fun,
+    lerp, cond, Anim, Fun,
+};
+pub use primitives::{
+    circle, constant, cycle, fun, half_circle, id, 
+cubic, prop, quadratic, quarter_circle, 
 };
 
 #[cfg(feature = "easer")]
