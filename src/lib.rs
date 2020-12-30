@@ -36,6 +36,8 @@
 //! assert_approx_eq!(value, 0.0);
 //! ```
 
+mod arithmetic;
+
 mod anim;
 mod primitives;
 
