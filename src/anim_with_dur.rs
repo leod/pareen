@@ -34,6 +34,13 @@ where
     }
 }
 
+pub fn slice<'a, V>(slice: &'a [V]) -> AnimWithDur<impl Fun<T = usize, V = V> + 'a>
+where
+    V: Clone + 'a,
+{
+    slice.into()
+}
+
 #[doc(hidden)]
 pub struct SliceClosure<'a, V>(&'a [V]);
 

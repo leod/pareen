@@ -48,7 +48,7 @@ mod easer_combinators;
 
 pub use anim::{cond, lerp, Anim, Fun};
 pub use anim_box::AnimBox;
-pub use anim_with_dur::AnimWithDur;
+pub use anim_with_dur::{AnimWithDur, slice};
 pub use primitives::{
     circle, constant, cubic, cycle, fun, half_circle, id, prop, quadratic, quarter_circle,
 };
