@@ -142,6 +142,19 @@ where
     }
 }
 
+impl<T, X, Y, F> Anim<F>
+where
+    F: Fun<T = T, V = (X, Y)>,
+{
+    pub fn fst(self) -> Anim<impl Fun<T = F::T, V = X>> {
+        self.map(|(x, _)| x)
+    }
+
+    pub fn snd(self) -> Anim<impl Fun<T = F::T, V = Y>> {
+        self.map(|(_, y)| y)
+    }
+}
+
 impl<F> Anim<F>
 where
     F: Fun,
@@ -165,6 +178,16 @@ where
         G: Fun<T = F::T, V = W>,
     {
         fun(move |t| f(self.eval(t)).eval(t))
+    }
+}
+
+impl<'a, T, V, F> Anim<F>
+where
+    V: 'a + Copy,
+    F: Fun<T = T, V = &'a V> + 'a,
+{
+    pub fn copied(self) -> Anim<impl Fun<T = T, V = V> + 'a> {
+        self.map(|x| *x)
     }
 }
 
