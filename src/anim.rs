@@ -191,6 +191,16 @@ where
     }
 }
 
+impl<'a, T, V, F> Anim<F>
+where
+    V: 'a + Clone,
+    F: Fun<T = T, V = &'a V> + 'a,
+{
+    pub fn cloned(self) -> Anim<impl Fun<T = T, V = V> + 'a> {
+        self.map(|x| x.clone())
+    }
+}
+
 #[doc(hidden)]
 #[derive(Debug, Clone)]
 pub struct ZipClosure<F, G>(F, G);
