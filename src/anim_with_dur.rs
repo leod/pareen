@@ -25,6 +25,30 @@ where
     }
 }
 
+impl<'a, V> From<&'a [V]> for AnimWithDur<SliceClosure<'a, V>>
+where
+    V: Clone,
+{
+    fn from(slice: &'a [V]) -> Self {
+        AnimWithDur(Anim(SliceClosure(slice)), slice.len())
+    }
+}
+
+#[doc(hidden)]
+pub struct SliceClosure<'a, V>(&'a [V]);
+
+impl<'a, V> Fun for SliceClosure<'a, V>
+where
+    V: Clone,
+{
+    type T = usize;
+    type V = V;
+
+    fn eval(&self, t: Self::T) -> Self::V {
+        self.0[t].clone()
+    }
+}
+
 impl<F> Anim<F>
 where
     F: Fun,
@@ -38,9 +62,51 @@ where
 impl<F> AnimWithDur<F>
 where
     F: Fun,
+    F::T: Clone,
 {
+    pub fn as_ref(&self) -> AnimWithDur<&F> {
+        AnimWithDur(self.0.as_ref(), self.1.clone())
+    }
+}
+
+impl<F> AnimWithDur<F>
+where
+    F: Fun,
+{
+    pub fn transform<G, H>(self, h: H) -> AnimWithDur<G>
+    where
+        G: Fun<T = F::T>,
+        H: FnOnce(Anim<F>) -> Anim<G>,
+    {
+        AnimWithDur(h(self.0), self.1)
+    }
+
+    pub fn map<W>(self, f: impl Fn(F::V) -> W) -> AnimWithDur<impl Fun<T = F::T, V = W>> {
+        self.transform(move |anim| anim.map(f))
+    }
+
     pub fn dur(self, t: F::T) -> AnimWithDur<F> {
         AnimWithDur(self.0, t)
+    }
+}
+
+impl<'a, T, X, Y, F> AnimWithDur<F>
+where
+    T: 'a + Clone,
+    X: 'a,
+    Y: 'a,
+    F: Fun<T = T, V = (X, Y)>,
+{
+    pub fn unzip(
+        &'a self,
+    ) -> (
+        AnimWithDur<impl Fun<T = F::T, V = X> + 'a>,
+        AnimWithDur<impl Fun<T = F::T, V = Y> + 'a>,
+    ) {
+        (
+            self.as_ref().transform(|anim| anim.fst()),
+            self.as_ref().transform(|anim| anim.snd()),
+        )
     }
 }
 
