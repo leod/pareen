@@ -5,6 +5,7 @@
 - Add `AnimWithDur` for easier composition of animations that have a fixed duration
 - Internal refactoring: split into multiple modules
 - Implement `Anim::{fst,snd,copied}`
+- Implement `AnimWithDur::{sum,mean}` and simple linear regression
 
 ## Version 0.2.6 (2020-08-17)
 - Make exponential slowdown of compile times less likely
