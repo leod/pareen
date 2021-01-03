@@ -62,6 +62,24 @@ where
     }
 }
 
+pub fn simple_linear_regression_with_slope<V, F, A>(slope: V, values: A) -> Anim<Line<V>>
+where
+    V: 'static + Float + Copy,
+    F: Fun<T = usize, V = (V, V)>,
+    A: Into<AnimWithDur<F>>,
+    usize: AsPrimitive<V>,
+{
+    // https://en.wikipedia.org/wiki/Simple_linear_regression#Fitting_the_regression_line
+    let values = values.into();
+    let (x, y) = values.unzip();
+    let x_mean = x.as_ref().mean();
+    let y_mean = y.as_ref().mean();
+
+    let y_intercept = y_mean - slope * x_mean;
+
+    Anim(Line { y_intercept, slope })
+}
+
 pub fn simple_linear_regression<V, F, A>(values: A) -> Anim<Line<V>>
 where
     V: 'static + Float + Copy,
