@@ -45,6 +45,7 @@ where
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Line<V> {
     pub y_intercept: V,
     pub slope: V,
