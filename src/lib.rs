@@ -41,7 +41,8 @@ mod anim_box;
 mod anim_with_dur;
 mod arithmetic;
 mod primitives;
-mod stats;
+
+pub mod stats;
 
 #[cfg(feature = "easer")]
 mod easer_combinators;
