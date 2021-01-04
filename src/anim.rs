@@ -125,6 +125,18 @@ where
     }
 }
 
+impl<F> Fun for Option<F>
+where
+    F: Fun,
+{
+    type T = F::T;
+    type V = Option<F::V>;
+
+    fn eval(&self, t: F::T) -> Option<F::V> {
+        self.as_ref().map(|f| f.eval(t))
+    }
+}
+
 #[doc(hidden)]
 #[derive(Debug, Clone)]
 pub struct MapClosure<F, G>(F, G);
