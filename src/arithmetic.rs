@@ -19,7 +19,6 @@ impl<W, F> Add<W> for Anim<F>
 where
     W: Copy,
     F: Fun,
-    F::T: Copy,
     F::V: Add<W>,
 {
     type Output = Anim<AddClosure<F, ConstantClosure<F::T, W>>>;
@@ -104,14 +103,14 @@ impl<F, G> Fun for AddClosure<F, G>
 where
     F: Fun,
     G: Fun<T = F::T>,
-    F::T: Copy,
+    F::T: Clone,
     F::V: Add<G::V>,
 {
     type T = F::T;
     type V = <F::V as Add<G::V>>::Output;
 
     fn eval(&self, t: F::T) -> Self::V {
-        self.0.eval(t) + self.1.eval(t)
+        self.0.eval(t.clone()) + self.1.eval(t)
     }
 }
 
@@ -123,14 +122,14 @@ impl<F, G> Fun for SubClosure<F, G>
 where
     F: Fun,
     G: Fun<T = F::T>,
-    F::T: Copy,
+    F::T: Clone,
     F::V: Sub<G::V>,
 {
     type T = F::T;
     type V = <F::V as Sub<G::V>>::Output;
 
     fn eval(&self, t: F::T) -> Self::V {
-        self.0.eval(t) - self.1.eval(t)
+        self.0.eval(t.clone()) - self.1.eval(t)
     }
 }
 

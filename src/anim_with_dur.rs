@@ -59,7 +59,7 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + Float,
+    F::T: Clone + Float,
 {
     pub fn scale_to_dur(self, dur: F::T) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
         self.scale_time(F::T::one() / dur).dur(dur)
@@ -139,7 +139,7 @@ where
     where
         G: Fun<T = F::T, V = F::V>,
     {
-        let dur = self.1 + next.1;
+        let dur = self.1.clone() + next.1;
         AnimWithDur(self.seq(next.0), dur)
     }
 }
@@ -147,7 +147,7 @@ where
 impl<F> AnimWithDur<F>
 where
     F: Fun,
-    F::T: Copy + Float,
+    F::T: Clone + Float,
 {
     pub fn repeat(self) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self.0.repeat(self.1)
@@ -157,20 +157,20 @@ where
 impl<F> AnimWithDur<F>
 where
     F: Fun,
-    F::T: Copy + Sub<Output = F::T>,
+    F::T: Clone + Sub<Output = F::T>,
 {
     pub fn backwards(self) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
-        AnimWithDur(self.0.backwards(self.1), self.1)
+        AnimWithDur(self.0.backwards(self.1.clone()), self.1)
     }
 }
 
 impl<F> AnimWithDur<F>
 where
     F: Fun,
-    F::T: Copy + Mul<Output = F::T> + Div<Output = F::T>,
+    F::T: Clone + Mul<Output = F::T> + Div<Output = F::T>,
 {
     pub fn scale_time(self, t_scale: F::T) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
-        AnimWithDur(self.0.scale_time(t_scale), self.1 / t_scale)
+        AnimWithDur(self.0.scale_time(t_scale.clone()), self.1 / t_scale)
     }
 }
 
