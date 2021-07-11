@@ -1,6 +1,6 @@
 [package]
 name = "pareen"
-version = "0.2.6"
+version = "0.3.0-alpha1"
 authors = ["leod <subtle.frustration@proton.me>"]
 edition = "2018"
 license = "MIT"
