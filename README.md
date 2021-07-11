@@ -14,7 +14,9 @@ having to pass around time variables; it hides the plumbing, so that you
 need to provide time only once: when evaluating the animation.
 
 Animations are composed similarly to Rust's iterators, so no memory
-allocations are necessary.
+allocations are necessary. The downside to this is that it is diffcult to store
+pareen's animations. The recommended approach is to construct and evaluate
+animations on the fly.
 
 ## Usage
 Just add this line to your dependencies in `Cargo.toml`:
@@ -23,12 +25,13 @@ pareen = "0.2"
 ```
 
 ## Current Status
-I consider `pareen` to be an experimental approach, and I'm not sure if I'm still happy with it.
-Anyway, the integration of easing functions could use some love. Contributions are very much welcome!
+I consider `pareen` to be an experimental approach, and I'm not sure if I'm
+still happy with it.  Anyway, the integration of easing functions could use
+some love. Contributions are very much welcome!
 
-Unfortunately, it looks like heavily nested animations can cause an exponential slowdown in compilation time.
-For now, boxing intermediate animations serves as a workaround, but this comes with a decrease of both
-readability and efficiency.
+Unfortunately, it looks like heavily nested animations can cause an exponential
+slowdown in compilation time. For now, boxing intermediate animations serves as
+a workaround, but this comes with a decrease of both readability and efficiency.
 
 ## Examples
 ```rust

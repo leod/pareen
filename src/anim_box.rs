@@ -12,8 +12,12 @@ where
     ///
     /// This may be used to reduce the compilation time of deeply nested
     /// animations.
-    pub fn into_box(self) -> Anim<Box<dyn Fun<T = F::T, V = F::V>>> {
+    pub fn into_box(self) -> AnimBox<F::T, F::V> {
         Anim(Box::new(self.0))
+    }
+
+    pub fn into_box_fn(self) -> Box<dyn Fn(F::T) -> F::V> {
+        Box::new(self.into_fn())
     }
 }
 
