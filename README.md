@@ -14,7 +14,9 @@ having to pass around time variables; it hides the plumbing, so that you
 need to provide time only once: when evaluating the animation.
 
 Animations are composed similarly to Rust's iterators, so no memory
-allocations are necessary.
+allocations are necessary. The downside to this is that it is diffcult to store
+pareen's animations. The recommended approach is to construct and evaluate
+animations on the fly.
 
 ## Usage
 Just add this line to your dependencies in `Cargo.toml`:
