@@ -118,10 +118,22 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + Mul<Output = F::T>,
+    F::T: Clone + Mul<Output = F::T>,
 {
     pub fn scale_time(self, t_scale: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        self.map_time(move |t| t * t_scale)
+        self.map_time(move |t| t * t_scale.clone())
+    }
+}
+
+impl<F> Fun for Option<F>
+where
+    F: Fun,
+{
+    type T = F::T;
+    type V = Option<F::V>;
+
+    fn eval(&self, t: F::T) -> Option<F::V> {
+        self.as_ref().map(|f| f.eval(t))
     }
 }
 
@@ -142,10 +154,23 @@ where
     }
 }
 
+impl<T, X, Y, F> Anim<F>
+where
+    F: Fun<T = T, V = (X, Y)>,
+{
+    pub fn fst(self) -> Anim<impl Fun<T = F::T, V = X>> {
+        self.map(|(x, _)| x)
+    }
+
+    pub fn snd(self) -> Anim<impl Fun<T = F::T, V = Y>> {
+        self.map(|(_, y)| y)
+    }
+}
+
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy,
+    F::T: Clone,
 {
     /// Combine two animations into one, yielding an animation having pairs as
     /// the values.
@@ -164,7 +189,27 @@ where
     where
         G: Fun<T = F::T, V = W>,
     {
-        fun(move |t| f(self.eval(t)).eval(t))
+        fun(move |t: F::T| f(self.eval(t.clone())).eval(t))
+    }
+}
+
+impl<'a, T, V, F> Anim<F>
+where
+    V: 'a + Copy,
+    F: Fun<T = T, V = &'a V> + 'a,
+{
+    pub fn copied(self) -> Anim<impl Fun<T = T, V = V> + 'a> {
+        self.map(|x| *x)
+    }
+}
+
+impl<'a, T, V, F> Anim<F>
+where
+    V: 'a + Clone,
+    F: Fun<T = T, V = &'a V> + 'a,
+{
+    pub fn cloned(self) -> Anim<impl Fun<T = T, V = V> + 'a> {
+        self.map(|x| x.clone())
     }
 }
 
@@ -175,14 +220,14 @@ pub struct ZipClosure<F, G>(F, G);
 impl<F, G> Fun for ZipClosure<F, G>
 where
     F: Fun,
-    F::T: Copy,
+    F::T: Clone,
     G: Fun<T = F::T>,
 {
     type T = F::T;
     type V = (F::V, G::V);
 
     fn eval(&self, t: F::T) -> Self::V {
-        (self.0.eval(t), self.1.eval(t))
+        (self.0.eval(t.clone()), self.1.eval(t))
     }
 }
 
@@ -200,7 +245,7 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + PartialOrd,
+    F::T: Clone + PartialOrd,
 {
     /// Concatenate `self` with another animation in time, using `self` until
     /// time `self_end` (non-inclusive), and then switching to `next`.
@@ -277,13 +322,13 @@ fn surround_cond<T: PartialOrd>(range: RangeInclusive<T>) -> Anim<impl Fun<T = T
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + PartialOrd,
-    F::V: Copy,
+    F::T: Clone + PartialOrd,
+    F::V: Clone,
 {
     /// Play `self` until time `self_end`, then always return the value of
     /// `self` at time `self_end`.
     pub fn hold(self, self_end: F::T) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        let end_value = self.eval(self_end);
+        let end_value = self.eval(self_end.clone());
 
         self.switch(self_end, constant(end_value))
     }
@@ -315,7 +360,7 @@ where
         G: Fun<T = F::T, V = F::V>,
         A: Into<Anim<G>>,
     {
-        self.switch(self_end, next.into().shift_time(self_end))
+        self.switch(self_end.clone(), next.into().shift_time(self_end))
     }
 
     pub fn seq_continue<G, A, H>(
@@ -328,7 +373,7 @@ where
         A: Into<Anim<G>>,
         H: Fn(F::V) -> A,
     {
-        let next = next_fn(self.eval(self_end)).into();
+        let next = next_fn(self.eval(self_end.clone())).into();
 
         self.seq(self_end, next)
     }
@@ -337,7 +382,7 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + Sub<Output = F::T>,
+    F::T: Clone + Sub<Output = F::T>,
 {
     /// Play an animation backwards, starting at time `end`.
     ///
@@ -375,7 +420,7 @@ where
     /// assert_approx_eq!(anim.eval(1.0f32), max);
     /// ```
     pub fn scale_min_max(self, min: F::V, max: F::V) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        self * (max - min) + min
+        self * (max.clone() - min) + min
     }
 }
 
@@ -551,7 +596,7 @@ where
 impl<V, F> Anim<F>
 where
     F: Fun<V = Option<V>>,
-    F::T: Copy,
+    F::T: Clone,
 {
     /// Unwrap an animation of optional values.
     ///
@@ -622,9 +667,9 @@ where
 
         //self.bind(move |v| v.map_or(default, f))
 
-        fun(move |t| {
-            self.eval(t)
-                .map_or_else(|| default.eval(t), |v| f(v).eval(t))
+        fun(move |t: F::T| {
+            self.eval(t.clone())
+                .map_or_else(|| default.eval(t.clone()), |v| f(v).eval(t.clone()))
         })
     }
 }
@@ -672,7 +717,7 @@ where
 /// ```
 pub fn cond<F, G, H, Cond, A, B>(cond: Cond, a: A, b: B) -> Anim<impl Fun<T = F::T, V = G::V>>
 where
-    F::T: Copy,
+    F::T: Clone,
     F: Fun<V = bool>,
     G: Fun<T = F::T>,
     H: Fun<T = F::T, V = G::V>,
@@ -692,7 +737,7 @@ pub struct CondClosure<F, G, H>(F, G, H);
 
 impl<F, G, H> Fun for CondClosure<F, G, H>
 where
-    F::T: Copy,
+    F::T: Clone,
     F: Fun<V = bool>,
     G: Fun<T = F::T>,
     H: Fun<T = F::T, V = G::V>,
@@ -701,7 +746,7 @@ where
     type V = G::V;
 
     fn eval(&self, t: F::T) -> G::V {
-        if self.0.eval(t) {
+        if self.0.eval(t.clone()) {
             self.1.eval(t)
         } else {
             self.2.eval(t)

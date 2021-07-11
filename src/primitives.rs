@@ -57,8 +57,8 @@ where
 /// assert_approx_eq!(anim.eval(0.0), 1.0);
 /// assert_approx_eq!(anim.eval(42.0), 1.0);
 /// ```
-pub fn constant<T, V: Copy>(c: V) -> Anim<impl Fun<T = T, V = V>> {
-    fun(move |_| c)
+pub fn constant<T, V: Clone>(c: V) -> Anim<impl Fun<T = T, V = V>> {
+    fun(move |_| c.clone())
 }
 
 #[doc(hidden)]
@@ -67,20 +67,19 @@ pub struct ConstantClosure<T, V>(V, PhantomData<T>);
 
 impl<T, V> Fun for ConstantClosure<T, V>
 where
-    T: Copy,
-    V: Copy,
+    V: Clone,
 {
     type T = T;
     type V = V;
 
     fn eval(&self, _: T) -> V {
-        self.0
+        self.0.clone()
     }
 }
 
 impl<T, V> From<V> for ConstantClosure<T, V>
 where
-    V: Copy,
+    V: Clone,
 {
     fn from(v: V) -> Self {
         ConstantClosure(v, PhantomData)
@@ -89,7 +88,7 @@ where
 
 impl<T, V> From<V> for Anim<ConstantClosure<T, V>>
 where
-    V: Copy,
+    V: Clone,
 {
     fn from(v: V) -> Self {
         Anim(ConstantClosure::from(v))
@@ -110,9 +109,9 @@ where
 /// ```
 pub fn prop<T, V, W>(m: V) -> Anim<impl Fun<T = T, V = W>>
 where
-    V: Copy + Mul<Output = W> + From<T>,
+    V: Clone + Mul<Output = W> + From<T>,
 {
-    fun(move |t| m * From::from(t))
+    fun(move |t| m.clone() * From::from(t))
 }
 
 /// An animation that returns time as its value.

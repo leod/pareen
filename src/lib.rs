@@ -42,14 +42,18 @@ mod anim_with_dur;
 mod arithmetic;
 mod primitives;
 
+pub mod stats;
+
 #[cfg(feature = "easer")]
 mod easer_combinators;
 
 pub use anim::{cond, lerp, Anim, Fun};
 pub use anim_box::AnimBox;
+pub use anim_with_dur::{slice, AnimWithDur};
 pub use primitives::{
     circle, constant, cubic, cycle, fun, half_circle, id, prop, quadratic, quarter_circle,
 };
+pub use stats::{simple_linear_regression, simple_linear_regression_with_slope};
 
 #[cfg(feature = "easer")]
 pub use easer;
