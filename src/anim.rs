@@ -113,6 +113,10 @@ where
     {
         anim.into().map_anim(self)
     }
+
+    pub fn into_fn(self) -> impl Fn(F::T) -> F::V {
+        move |t| self.eval(t)
+    }
 }
 
 impl<F> Anim<F>
