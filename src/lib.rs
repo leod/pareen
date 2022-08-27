@@ -36,7 +36,10 @@
 //! assert_approx_eq!(value, 0.0);
 //! ```
 
+#![no_std]
+
 mod anim;
+#[cfg(feature = "alloc")]
 mod anim_box;
 mod anim_with_dur;
 mod arithmetic;
@@ -48,6 +51,7 @@ pub mod stats;
 mod easer_combinators;
 
 pub use anim::{cond, lerp, Anim, Fun};
+#[cfg(feature = "alloc")]
 pub use anim_box::AnimBox;
 pub use anim_with_dur::{slice, AnimWithDur};
 pub use primitives::{

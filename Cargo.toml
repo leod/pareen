@@ -12,13 +12,18 @@ keywords = ["animation", "combinators", "tween", "easing"]
 readme = "README.md"
 exclude = [".github"]
 
+[features]
+default = ["std"]
+std = ["alloc", "num-traits/std"]
+alloc = []
+
 [dependencies]
-num-traits = "0.2"
-easer = { version = "0.2", optional = true }
+num-traits = { version = "0.2", default-features = false }
+easer = { version = "0.2", default-features = false, optional = true }
 
 [dev-dependencies]
 assert_approx_eq = "1.0"
 gnuplot = "0.0.32"
 
 [package.metadata.docs.rs]
-features = ["easer"]
+features = ["std", "alloc", "easer"]

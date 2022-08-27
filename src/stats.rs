@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul};
+use core::ops::{Add, Div, Mul};
 
 use num_traits::{AsPrimitive, Float, Zero};
 
@@ -105,9 +105,11 @@ where
     Anim(Line { y_intercept, slope })
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod tests {
     use assert_approx_eq::assert_approx_eq;
+    extern crate alloc;
+    use alloc::vec;
 
     use super::simple_linear_regression;
 

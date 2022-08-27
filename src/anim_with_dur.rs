@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Sub};
+use core::ops::{Add, Div, Mul, Sub};
 
 use num_traits::{Float, One};
 

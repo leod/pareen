@@ -1,5 +1,5 @@
-use std::marker::PhantomData;
-use std::ops::Mul;
+use core::marker::PhantomData;
+use core::ops::Mul;
 
 use crate::{Anim, Fun};
 
