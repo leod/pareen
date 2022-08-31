@@ -1,5 +1,8 @@
 # Changelog
-## Version 0.3.0 (unreleased)
+## Version 0.3.1 (2022-08-31)
+- Fix docs
+
+## Version 0.3.0 (2022-08-31)
 - Make operator overloading of `Mul`, `Add` and `Sub` more flexible.
   This may break compilation in some cases, since types are more generic now.
 - Add `AnimWithDur` for easier composition of animations that have a fixed duration
