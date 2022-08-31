@@ -10,6 +10,7 @@ documentation = "https://docs.rs/pareen"
 repository = "https://github.com/leod/pareen"
 keywords = ["animation", "combinators", "tween", "easing"]
 readme = "README.md"
+exclude = [".github"]
 
 [dependencies]
 num-traits = "0.2"
