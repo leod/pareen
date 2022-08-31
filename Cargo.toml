@@ -1,6 +1,6 @@
 [package]
 name = "pareen"
-version = "0.3.0-alpha1"
+version = "0.3.0"
 authors = ["leod <subtle.frustration@proton.me>"]
 edition = "2018"
 license = "MIT"
@@ -10,6 +10,7 @@ documentation = "https://docs.rs/pareen"
 repository = "https://github.com/leod/pareen"
 keywords = ["animation", "combinators", "tween", "easing"]
 readme = "README.md"
+exclude = [".github"]
 
 [dependencies]
 num-traits = "0.2"
