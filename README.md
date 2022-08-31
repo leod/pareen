@@ -18,12 +18,6 @@ allocations are necessary. The downside to this is that it is diffcult to store
 pareen's animations. The recommended approach is to construct and evaluate
 animations on the fly.
 
-## Usage
-Just add this line to your dependencies in `Cargo.toml`:
-```
-pareen = "0.2"
-```
-
 ## Current Status
 I consider `pareen` to be an experimental approach, and I'm not sure if I'm
 still happy with it.  Anyway, the integration of easing functions could use
