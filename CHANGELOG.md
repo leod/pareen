@@ -1,4 +1,7 @@
 # Changelog
+## Version 0.3.2 (2023-06-03)
+- Bump version
+
 ## Version 0.3.1 (2022-08-31)
 - Fix docs
 
