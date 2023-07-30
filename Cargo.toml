@@ -16,6 +16,7 @@ exclude = [".github"]
 default = ["std"]
 std = ["alloc", "num-traits/std"]
 alloc = []
+libm = ["num-traits/libm"]
 
 [dependencies]
 num-traits = { version = "0.2", default-features = false }
@@ -26,4 +27,8 @@ assert_approx_eq = "1.0"
 gnuplot = "0.0.32"
 
 [package.metadata.docs.rs]
-features = ["std", "alloc", "easer"]
+features = ["std", "alloc", "libm", "easer"]
+
+[[example]]
+name = "plots"
+required-features = ["std"]
