@@ -1,9 +1,9 @@
-use std::marker::PhantomData;
-use std::ops::Mul;
+use core::marker::PhantomData;
+use core::ops::Mul;
 
 use crate::{Anim, Fun};
 
-use num_traits::{Float, FloatConst};
+use num_traits::{FloatConst, float::FloatCore};
 
 /// Turn any function `Fn(T) -> V` into an [`Anim`](struct.Anim.html).
 ///
@@ -143,8 +143,8 @@ where
 /// Proportionally increase value from zero to 2π.
 pub fn circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
-    T: Float,
-    V: Float + FloatConst + From<T>,
+    T: FloatCore,
+    V: FloatCore + FloatConst + From<T>,
 {
     prop(V::PI() * (V::one() + V::one()))
 }
@@ -152,8 +152,8 @@ where
 /// Proportionally increase value from zero to π.
 pub fn half_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
-    T: Float,
-    V: Float + FloatConst + From<T>,
+    T: FloatCore,
+    V: FloatCore + FloatConst + From<T>,
 {
     prop(V::PI())
 }
@@ -161,8 +161,8 @@ where
 /// Proportionally increase value from zero to π/2.
 pub fn quarter_circle<T, V>() -> Anim<impl Fun<T = T, V = V>>
 where
-    T: Float,
-    V: Float + FloatConst + From<T>,
+    T: FloatCore,
+    V: FloatCore + FloatConst + From<T>,
 {
     prop(V::PI() * (V::one() / (V::one() + V::one())))
 }
@@ -170,7 +170,7 @@ where
 /// Evaluate a quadratic polynomial in time.
 pub fn quadratic<T>(w: &[T; 3]) -> Anim<impl Fun<T = T, V = T> + '_>
 where
-    T: Float,
+    T: FloatCore,
 {
     fun(move |t| {
         let t2 = t * t;
@@ -182,7 +182,7 @@ where
 /// Evaluate a cubic polynomial in time.
 pub fn cubic<T>(w: &[T; 4]) -> Anim<impl Fun<T = T, V = T> + '_>
 where
-    T: Float,
+    T: FloatCore,
 {
     fun(move |t| {
         let t2 = t * t;

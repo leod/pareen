@@ -1,4 +1,6 @@
-use std::ops::{Deref, Sub};
+use core::ops::{Deref, Sub};
+extern crate alloc;
+use alloc::boxed::Box;
 
 use crate::{Anim, Fun};
 

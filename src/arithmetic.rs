@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Neg, Sub};
+use core::ops::{Add, Mul, Neg, Sub};
 
 use crate::{primitives::ConstantClosure, Anim, Fun};
 

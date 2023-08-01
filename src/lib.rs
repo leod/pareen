@@ -23,20 +23,25 @@
 //! // Animations can be played in sequence
 //! let anim2 = anim1.seq(0.7, pareen::prop(0.25) + 0.5);
 //!
-//! // Animations can be composed and transformed in various ways
-//! let anim3 = anim2
-//!     .lerp(pareen::circle().cos())
-//!     .scale_min_max(5.0, 10.0)
-//!     .backwards(1.0)
-//!     .squeeze(0.5..=1.0);
-//!
-//! let anim4 = pareen::cubic(&[1.0, 2.0, 3.0, 4.0]) - anim3;
-//!
-//! let value = anim4.eval(1.0);
-//! assert_approx_eq!(value, 0.0);
+#![cfg_attr(any(feature = "std", feature = "libm"), doc = r##"
+// Animations can be composed and transformed in various ways
+let anim3 = anim2
+    .lerp(pareen::circle().cos())
+    .scale_min_max(5.0, 10.0)
+    .backwards(1.0)
+    .squeeze(0.5..=1.0);
+
+    let anim4 = pareen::cubic(&[1.0, 2.0, 3.0, 4.0]) - anim3;
+
+    let value = anim4.eval(1.0);
+    assert_approx_eq!(value, 0.0);
+"##)]
 //! ```
 
+#![no_std]
+
 mod anim;
+#[cfg(feature = "alloc")]
 mod anim_box;
 mod anim_with_dur;
 mod arithmetic;
@@ -44,10 +49,11 @@ mod primitives;
 
 pub mod stats;
 
-#[cfg(feature = "easer")]
+#[cfg(all(feature = "easer", any(feature = "std", feature = "libm")))]
 mod easer_combinators;
 
 pub use anim::{cond, lerp, Anim, Fun};
+#[cfg(feature = "alloc")]
 pub use anim_box::AnimBox;
 pub use anim_with_dur::{slice, AnimWithDur};
 pub use primitives::{
@@ -55,8 +61,8 @@ pub use primitives::{
 };
 pub use stats::{simple_linear_regression, simple_linear_regression_with_slope};
 
-#[cfg(feature = "easer")]
+#[cfg(all(feature = "easer", any(feature = "std", feature = "libm")))]
 pub use easer;
 
-#[cfg(feature = "easer")]
+#[cfg(all(feature = "easer", any(feature = "std", feature = "libm")))]
 pub use easer_combinators::{ease_in, ease_in_out, ease_out};

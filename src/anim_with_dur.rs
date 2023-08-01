@@ -1,6 +1,6 @@
-use std::ops::{Add, Div, Mul, Sub};
+use core::ops::{Add, Div, Mul, Sub};
 
-use num_traits::{Float, One};
+use num_traits::{float::FloatCore, One};
 
 use crate::{Anim, Fun};
 
@@ -59,7 +59,7 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Clone + Float,
+    F::T: Clone + FloatCore,
 {
     pub fn scale_to_dur(self, dur: F::T) -> AnimWithDur<impl Fun<T = F::T, V = F::V>> {
         self.scale_time(F::T::one() / dur).dur(dur)
@@ -147,7 +147,7 @@ where
 impl<F> AnimWithDur<F>
 where
     F: Fun,
-    F::T: Clone + Float,
+    F::T: Clone + FloatCore,
 {
     pub fn repeat(self) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self.0.repeat(self.1)

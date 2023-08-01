@@ -1,6 +1,6 @@
-use std::ops::{Add, Div, Mul};
+use core::ops::{Add, Div, Mul};
 
-use num_traits::{AsPrimitive, Float, Zero};
+use num_traits::{float::FloatCore, AsPrimitive, Zero};
 
 use crate::{Anim, AnimWithDur, Fun};
 
@@ -65,7 +65,7 @@ where
 
 pub fn simple_linear_regression_with_slope<V, F, A>(slope: V, values: A) -> Anim<Line<V>>
 where
-    V: 'static + Float + Copy,
+    V: 'static + FloatCore + Copy,
     F: Fun<T = usize, V = (V, V)>,
     A: Into<AnimWithDur<F>>,
     usize: AsPrimitive<V>,
@@ -83,7 +83,7 @@ where
 
 pub fn simple_linear_regression<V, F, A>(values: A) -> Anim<Line<V>>
 where
-    V: 'static + Float + Copy,
+    V: 'static + FloatCore + Copy,
     F: Fun<T = usize, V = (V, V)>,
     A: Into<AnimWithDur<F>>,
     usize: AsPrimitive<V>,
@@ -105,9 +105,11 @@ where
     Anim(Line { y_intercept, slope })
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 mod tests {
     use assert_approx_eq::assert_approx_eq;
+    extern crate alloc;
+    use alloc::vec;
 
     use super::simple_linear_regression;
 

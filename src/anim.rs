@@ -1,6 +1,8 @@
-use std::ops::{Add, Mul, RangeInclusive, Sub};
+use core::ops::{Add, Mul, RangeInclusive, Sub};
 
-use num_traits::{Float, Num, One, Zero};
+#[cfg(any(feature = "std", feature = "libm"))]
+use num_traits::Float;
+use num_traits::{float::FloatCore, Num, One, Zero};
 
 use crate::{constant, fun, id};
 
@@ -428,6 +430,7 @@ where
     }
 }
 
+#[cfg(any(feature = "std", feature = "libm"))]
 impl<F> Anim<F>
 where
     F: Fun,
@@ -443,17 +446,23 @@ where
         self.map(Float::cos)
     }
 
-    /// Apply `Float::abs` to the animation values.
-    pub fn abs(self) -> Anim<impl Fun<T = F::T, V = F::V>> {
-        self.map(Float::abs)
-    }
-
     /// Apply `Float::powf` to the animation values.
     pub fn powf(self, e: F::V) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self.map(move |v| v.powf(e))
     }
+}
 
-    /// Apply `Float::powi` to the animation values.
+impl<F> Anim<F>
+where
+    F: Fun,
+    F::V: FloatCore,
+{
+    /// Apply `FloatCore::abs` to the animation values.
+    pub fn abs(self) -> Anim<impl Fun<T = F::T, V = F::V>> {
+        self.map(FloatCore::abs)
+    }
+
+    /// Apply `FloatCore::powi` to the animation values.
     pub fn powi(self, n: i32) -> Anim<impl Fun<T = F::T, V = F::V>> {
         self.map(move |v| v.powi(n))
     }
@@ -462,7 +471,7 @@ where
 impl<F> Anim<F>
 where
     F: Fun,
-    F::T: Copy + Float,
+    F::T: Copy + FloatCore,
 {
     /// Transform an animation in time, so that its time `[0 .. 1]` is shifted
     /// and scaled into the given `range`.
@@ -572,13 +581,14 @@ where
     /// assert_approx_eq!(anim.eval(1.0), 10.0);
     /// assert_approx_eq!(anim.eval(2.0), 15.0);
     /// ```
-    ///
-    /// It is also possible to linearly interpolate between two non-constant
-    /// animations:
-    /// ```
-    /// let anim = pareen::circle().sin().lerp(pareen::circle().cos());
-    /// let value: f32 = anim.eval(0.5f32);
-    /// ```
+    #[cfg_attr(any(feature = "std", feature = "libm"), doc = r##"
+It is also possible to linearly interpolate between two non-constant
+animations:
+```
+let anim = pareen::circle().sin().lerp(pareen::circle().cos());
+let value: f32 = anim.eval(0.5f32);
+```
+    "##)]
     pub fn lerp<G, A>(self, other: A) -> Anim<impl Fun<T = F::T, V = F::V>>
     where
         G: Fun<T = F::T, V = F::V>,
