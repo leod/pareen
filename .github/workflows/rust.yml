@@ -24,3 +24,11 @@ jobs:
       run: cargo build --features easer --verbose
     - name: Run tests (with easer feature)
       run: cargo test --features easer --verbose
+    - name: Run tests (without default features)
+      run: cargo test --no-default-features --verbose
+    - name: Run tests (without default features, with alloc feature)
+      run: cargo test --no-default-features --features alloc --verbose
+    - name: Run tests (without default features, with libm feature)
+      run: cargo test --no-default-features --features libm --verbose
+    - name: Run tests (without default features, with alloc and libm features)
+      run: cargo test --no-default-features --features alloc,libm --verbose
